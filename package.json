@@ -1,0 +1,14 @@
+{
+  "name": "bankenplakate-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Webapp: Person fotografiert sich, Nano Banana Pro setzt sie ins Plakatmotiv.",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0"
+  }
+}

@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bankenplakate – Person-Swap</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1f2630;
+    --line: #2a313c;
+    --text: #e8edf2;
+    --muted: #98a2b3;
+    --accent: #4f8cff;
+    --accent-2: #2f6ad9;
+    --good: #34d399;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif; }
+  header {
+    padding: 24px 32px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  header h1 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 28px; display: grid; gap: 24px; }
+  section.card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px;
+  }
+  section.card h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); }
+  section.card p.help { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+
+  /* Motif grid */
+  .motif-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .motif-tile {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+    cursor: pointer; position: relative; aspect-ratio: 3/4; transition: transform .12s ease, border-color .12s ease;
+  }
+  .motif-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .motif-tile.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,140,255,0.25); }
+  .motif-tile:hover { transform: translateY(-2px); }
+  .motif-tile .badge {
+    position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); color: #fff;
+    padding: 4px 8px; border-radius: 999px; font-size: 11px; opacity: 0; transition: opacity .12s;
+  }
+  .motif-tile.selected .badge { opacity: 1; background: var(--accent); }
+  .motif-upload {
+    background: var(--panel-2); border: 1px dashed var(--line); border-radius: 10px;
+    aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; color: var(--muted);
+    cursor: pointer; text-align: center; font-size: 13px; padding: 12px;
+  }
+  .motif-upload:hover { border-color: var(--accent); color: var(--text); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 14px; }
+  .tab {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    padding: 8px 14px; border-radius: 999px; font-size: 13px; cursor: pointer;
+  }
+  .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Webcam */
+  .cam-wrap { position: relative; width: 100%; max-width: 560px; aspect-ratio: 3/4; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+  .cam-wrap video, .cam-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .cam-wrap video { object-fit: cover; transform: scaleX(-1); }
+  .cam-wrap .overlay { pointer-events: none; opacity: 0.35; mix-blend-mode: screen; }
+  .cam-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .opacity-row { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+  .opacity-row input[type=range] { width: 140px; }
+
+  /* Buttons */
+  .btn {
+    background: var(--accent); color: #fff; border: 0; padding: 11px 18px; border-radius: 10px;
+    font-size: 14px; font-weight: 500; cursor: pointer; transition: background .12s ease;
+  }
+  .btn:hover { background: var(--accent-2); }
+  .btn:disabled { background: #2a313c; color: var(--muted); cursor: not-allowed; }
+  .btn.secondary { background: transparent; border: 1px solid var(--line); color: var(--text); }
+  .btn.secondary:hover { background: var(--panel-2); }
+  .btn.big { padding: 14px 22px; font-size: 15px; }
+
+  /* Upload */
+  .upload-zone {
+    border: 1px dashed var(--line); border-radius: 10px; padding: 28px; text-align: center;
+    color: var(--muted); cursor: pointer; max-width: 560px;
+  }
+  .upload-zone:hover { border-color: var(--accent); color: var(--text); }
+  .preview { max-width: 280px; border-radius: 10px; border: 1px solid var(--line); margin-top: 12px; display: block; }
+
+  /* Mode */
+  .mode-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .mode-card {
+    flex: 1 1 240px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px; cursor: pointer;
+  }
+  .mode-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,140,255,0.2); }
+  .mode-card strong { display: block; font-size: 14px; margin-bottom: 4px; }
+  .mode-card span { color: var(--muted); font-size: 13px; }
+
+  /* Result */
+  .result-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  .result-wrap img { width: 100%; border-radius: 10px; border: 1px solid var(--line); }
+  .result-wrap .col h3 { font-size: 13px; color: var(--muted); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+  @media (max-width: 720px) { .result-wrap { grid-template-columns: 1fr; } }
+
+  /* Spinner */
+  .spinner-wrap { display: flex; align-items: center; gap: 12px; color: var(--muted); }
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 10px; }
+  .alert.bad { background: rgba(248,113,113,0.1); color: var(--bad); border: 1px solid rgba(248,113,113,0.3); }
+  .alert.warn { background: rgba(251,191,36,0.08); color: var(--warn); border: 1px solid rgba(251,191,36,0.3); }
+
+  .step-num {
+    display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center;
+    background: var(--accent); color: #fff; border-radius: 50%; font-size: 12px; margin-right: 8px; vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Bankenplakate · Person-Swap</h1>
+    <div class="sub">Nano Banana Pro setzt deine Person ins Originalmotiv</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Step 1: Motiv -->
+  <section class="card">
+    <h2><span class="step-num">1</span>Motiv wählen</h2>
+    <p class="help">Wähle ein vorhandenes Plakatmotiv oder lade ein eigenes Vorbild hoch (Hochformat empfohlen).</p>
+    <div class="motif-grid" id="motifGrid"></div>
+    <input type="file" id="motifUpload" accept="image/*" hidden />
+  </section>
+
+  <!-- Step 2: Person -->
+  <section class="card">
+    <h2><span class="step-num">2</span>Person erfassen</h2>
+    <p class="help">Stell dich in dieselbe Pose wie die Person im Motiv. Das Originalmotiv erscheint als halbtransparente Schablone über dem Kamerabild – nutze sie als Hilfe beim Ausrichten.</p>
+    <div class="tabs">
+      <button class="tab active" data-tab="cam">Webcam</button>
+      <button class="tab" data-tab="upload">Foto hochladen</button>
+    </div>
+
+    <div id="tab-cam">
+      <div class="cam-wrap">
+        <video id="cam" playsinline autoplay muted></video>
+        <canvas id="overlay" class="overlay"></canvas>
+      </div>
+      <div class="cam-controls">
+        <button class="btn" id="startCam">Kamera starten</button>
+        <button class="btn secondary" id="capture" disabled>Aufnehmen</button>
+        <label class="opacity-row">Schablonen-Deckkraft <input type="range" id="overlayOpacity" min="0" max="100" value="35" /></label>
+      </div>
+      <canvas id="snapshot" hidden></canvas>
+      <img id="camPreview" class="preview" hidden />
+    </div>
+
+    <div id="tab-upload" hidden>
+      <div class="upload-zone" id="uploadZone">
+        Foto hierher ziehen oder klicken zum Auswählen
+        <input type="file" id="personUpload" accept="image/*" hidden />
+      </div>
+      <img id="uploadPreview" class="preview" hidden />
+    </div>
+  </section>
+
+  <!-- Step 3: Modus -->
+  <section class="card">
+    <h2><span class="step-num">3</span>Austausch-Modus</h2>
+    <p class="help">Soll nur das Gesicht/die Identität ausgetauscht werden (Anzug, Pose und Hintergrund bleiben original) oder die komplette Person?</p>
+    <div class="mode-row">
+      <div class="mode-card selected" data-mode="face">
+        <strong>Nur Gesicht / Identität</strong>
+        <span>Originaloutfit, Pose und Komposition bleiben erhalten. Empfohlen für konsistente Plakatreihen.</span>
+      </div>
+      <div class="mode-card" data-mode="full">
+        <strong>Komplette Person</strong>
+        <span>Ersetzt die Person inkl. Outfit. Sinnvoll, wenn der Nutzer in eigenem Look erscheinen soll.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 4: Generate -->
+  <section class="card">
+    <h2><span class="step-num">4</span>Plakat generieren</h2>
+    <p class="help">Erzeugt mit Gemini 3 Pro Image (Nano Banana Pro), 4K · 3:4. Dauert je nach Auslastung 15–60 s.</p>
+    <button class="btn big" id="generateBtn" disabled>Plakat generieren</button>
+    <div id="status"></div>
+  </section>
+
+  <!-- Step 5: Result -->
+  <section class="card" id="resultCard" hidden>
+    <h2><span class="step-num">5</span>Ergebnis</h2>
+    <div class="result-wrap">
+      <div class="col">
+        <h3>Original</h3>
+        <img id="resultOriginal" />
+      </div>
+      <div class="col">
+        <h3>Generiert</h3>
+        <img id="resultImage" />
+        <div style="margin-top: 12px; display: flex; gap: 10px;">
+          <a id="downloadBtn" class="btn" download="bankenplakat.png">Bild herunterladen</a>
+          <button class="btn secondary" id="regenerateBtn">Neu generieren</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script type="module">
+  // ------------------ State ------------------
+  const state = {
+    motif: null,         // { src, dataUrl }
+    person: null,        // dataUrl
+    mode: "face",
+    overlayOpacity: 0.35,
+  };
+
+  const DEFAULT_MOTIFS = [
+    { src: "/motifs/mann_schafe.png", label: "Mann · Schafe" },
+    { src: "/motifs/frau_schafe.png", label: "Frau · Schafe" }
+  ];
+
+  // ------------------ Utils ------------------
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+  async function urlToDataUrl(url) {
+    const r = await fetch(url);
+    const blob = await r.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Verkleinert ein dataUrl-Bild auf max. `maxSide` Pixel auf der längeren Seite
+  // und re-encodet als JPEG. Hält das Request-Payload unter Vercels 4,5 MB Limit.
+  async function resizeDataUrl(dataUrl, maxSide = 1600, quality = 0.9) {
+    const img = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = dataUrl;
+    });
+    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const ctx = c.getContext("2d");
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, w, h);
+    return c.toDataURL("image/jpeg", quality);
+  }
+
+  function setStatus(html, kind = "") {
+    const el = $("#status");
+    el.innerHTML = html ? `<div class="alert ${kind}">${html}</div>` : "";
+  }
+
+  function checkReady() {
+    $("#generateBtn").disabled = !(state.motif && state.person);
+  }
+
+  // ------------------ Step 1: Motif grid ------------------
+  function renderMotifs() {
+    const grid = $("#motifGrid");
+    grid.innerHTML = "";
+    DEFAULT_MOTIFS.forEach(m => {
+      const tile = document.createElement("div");
+      tile.className = "motif-tile";
+      tile.innerHTML = `<img src="${m.src}" alt="${m.label}" /><div class="badge">Ausgewählt</div>`;
+      tile.addEventListener("click", () => selectMotif(m.src, tile));
+      grid.appendChild(tile);
+    });
+    const upload = document.createElement("div");
+    upload.className = "motif-upload";
+    upload.textContent = "+ Eigenes Motiv hochladen";
+    upload.addEventListener("click", () => $("#motifUpload").click());
+    grid.appendChild(upload);
+  }
+
+  async function selectMotif(src, tileEl) {
+    $$(".motif-tile").forEach(t => t.classList.remove("selected"));
+    if (tileEl) tileEl.classList.add("selected");
+    state.motif = { src, dataUrl: await urlToDataUrl(src) };
+    drawOverlay();
+    checkReady();
+  }
+
+  $("#motifUpload").addEventListener("change", async e => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const dataUrl = await fileToDataUrl(f);
+    // Add as a new tile + select it
+    const grid = $("#motifGrid");
+    const tile = document.createElement("div");
+    tile.className = "motif-tile";
+    tile.innerHTML = `<img src="${dataUrl}" alt="Eigenes Motiv" /><div class="badge">Ausgewählt</div>`;
+    grid.insertBefore(tile, grid.lastChild);
+    $$(".motif-tile").forEach(t => t.classList.remove("selected"));
+    tile.classList.add("selected");
+    state.motif = { src: dataUrl, dataUrl };
+    tile.addEventListener("click", () => {
+      $$(".motif-tile").forEach(t => t.classList.remove("selected"));
+      tile.classList.add("selected");
+      state.motif = { src: dataUrl, dataUrl };
+      drawOverlay();
+      checkReady();
+    });
+    drawOverlay();
+    checkReady();
+  });
+
+  // ------------------ Step 2: Tabs ------------------
+  $$(".tab").forEach(t => {
+    t.addEventListener("click", () => {
+      $$(".tab").forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      const tab = t.dataset.tab;
+      $("#tab-cam").hidden = tab !== "cam";
+      $("#tab-upload").hidden = tab !== "upload";
+    });
+  });
+
+  // ------------------ Webcam ------------------
+  let stream = null;
+
+  $("#startCam").addEventListener("click", async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 2560 } },
+        audio: false
+      });
+      const v = $("#cam");
+      v.srcObject = stream;
+      await v.play();
+      $("#capture").disabled = false;
+      $("#startCam").textContent = "Kamera läuft";
+      $("#startCam").disabled = true;
+      drawOverlay();
+    } catch (e) {
+      setStatus(`Kamera-Zugriff fehlgeschlagen: ${e.message}`, "bad");
+    }
+  });
+
+  $("#overlayOpacity").addEventListener("input", e => {
+    state.overlayOpacity = e.target.value / 100;
+    drawOverlay();
+  });
+
+  function drawOverlay() {
+    const c = $("#overlay");
+    const ctx = c.getContext("2d");
+    const wrap = c.parentElement;
+    c.width = wrap.clientWidth;
+    c.height = wrap.clientHeight;
+    ctx.clearRect(0, 0, c.width, c.height);
+    if (!state.motif) return;
+    const img = new Image();
+    img.onload = () => {
+      // cover
+      const ar = img.width / img.height;
+      const car = c.width / c.height;
+      let dw, dh, dx, dy;
+      if (ar > car) {
+        dh = c.height; dw = dh * ar; dx = (c.width - dw) / 2; dy = 0;
+      } else {
+        dw = c.width; dh = dw / ar; dx = 0; dy = (c.height - dh) / 2;
+      }
+      ctx.globalAlpha = state.overlayOpacity;
+      ctx.drawImage(img, dx, dy, dw, dh);
+      ctx.globalAlpha = 1;
+    };
+    img.src = state.motif.src;
+  }
+
+  $("#capture").addEventListener("click", () => {
+    const v = $("#cam");
+    const snap = $("#snapshot");
+    snap.width = v.videoWidth;
+    snap.height = v.videoHeight;
+    const ctx = snap.getContext("2d");
+    // un-mirror for output
+    ctx.translate(snap.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(v, 0, 0, snap.width, snap.height);
+    const dataUrl = snap.toDataURL("image/jpeg", 0.92);
+    state.person = dataUrl;
+    const prev = $("#camPreview");
+    prev.src = dataUrl;
+    prev.hidden = false;
+    setStatus("Foto erfasst.", "warn");
+    checkReady();
+  });
+
+  // ------------------ Upload tab ------------------
+  $("#uploadZone").addEventListener("click", () => $("#personUpload").click());
+  $("#uploadZone").addEventListener("dragover", e => { e.preventDefault(); });
+  $("#uploadZone").addEventListener("drop", async e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (f) await loadPersonFile(f);
+  });
+  $("#personUpload").addEventListener("change", async e => {
+    const f = e.target.files?.[0];
+    if (f) await loadPersonFile(f);
+  });
+  async function loadPersonFile(file) {
+    const dataUrl = await fileToDataUrl(file);
+    state.person = dataUrl;
+    const prev = $("#uploadPreview");
+    prev.src = dataUrl;
+    prev.hidden = false;
+    checkReady();
+  }
+
+  // ------------------ Step 3: Mode ------------------
+  $$(".mode-card").forEach(card => {
+    card.addEventListener("click", () => {
+      $$(".mode-card").forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+      state.mode = card.dataset.mode;
+    });
+  });
+
+  // ------------------ Step 4: Generate ------------------
+  $("#generateBtn").addEventListener("click", generate);
+  $("#regenerateBtn")?.addEventListener("click", generate);
+
+  async function generate() {
+    if (!state.motif || !state.person) return;
+    $("#generateBtn").disabled = true;
+    setStatus(`<div class="spinner-wrap"><div class="spinner"></div>Generiere Plakat mit Nano Banana Pro… das kann 15–60 Sekunden dauern.</div>`);
+    try {
+      const t0 = performance.now();
+      // Auf Versand-Größe verkleinern (Vercel-Body-Limit beachten)
+      const [refSmall, personSmall] = await Promise.all([
+        resizeDataUrl(state.motif.dataUrl, 1600, 0.92),
+        resizeDataUrl(state.person, 1600, 0.92)
+      ]);
+      const r = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          referenceImage: refSmall,
+          personImage: personSmall,
+          mode: state.mode,
+          aspectRatio: "3:4",
+          imageSize: "4K"
+        })
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      const dur = ((performance.now() - t0) / 1000).toFixed(1);
+      $("#resultOriginal").src = state.motif.src;
+      $("#resultImage").src = j.image;
+      $("#downloadBtn").href = j.image;
+      $("#resultCard").hidden = false;
+      setStatus(`Fertig in ${dur} s.${j.note ? " · Modell-Hinweis: " + j.note : ""}`, "warn");
+      $("#resultCard").scrollIntoView({ behavior: "smooth" });
+    } catch (e) {
+      setStatus(`Fehler: ${e.message}`, "bad");
+    } finally {
+      $("#generateBtn").disabled = false;
+    }
+  }
+
+  // ------------------ Init ------------------
+  renderMotifs();
+  // Auto-select first motif
+  setTimeout(() => {
+    const first = $(".motif-tile");
+    if (first) first.click();
+  }, 50);
+
+  window.addEventListener("resize", drawOverlay);
+</script>
+
+</body>
+</html>
