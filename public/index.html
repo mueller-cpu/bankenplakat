@@ -91,6 +91,35 @@
   .upload-zone:hover { border-color: var(--accent); color: var(--text); }
   .preview { max-width: 280px; border-radius: 10px; border: 1px solid var(--line); margin-top: 12px; display: block; }
 
+  /* Multi-person previews */
+  .person-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px; margin-top: 14px; max-width: 580px;
+  }
+  .person-tile {
+    position: relative; aspect-ratio: 3/4; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--line); background: var(--panel-2);
+  }
+  .person-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .person-tile .badge-primary {
+    position: absolute; top: 6px; left: 6px; background: var(--accent); color: #fff;
+    padding: 3px 7px; border-radius: 999px; font-size: 10px; font-weight: 600;
+  }
+  .person-tile .remove-x {
+    position: absolute; top: 6px; right: 6px; width: 22px; height: 22px;
+    background: rgba(0,0,0,0.65); color: #fff; border: 0; border-radius: 50%;
+    font-size: 14px; line-height: 1; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .person-tile .remove-x:hover { background: var(--bad); }
+  .person-add-tile {
+    aspect-ratio: 3/4; border: 1px dashed var(--line); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; color: var(--muted);
+    cursor: pointer; font-size: 13px; text-align: center; padding: 8px;
+  }
+  .person-add-tile:hover { border-color: var(--accent); color: var(--text); }
+  .person-count { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
   /* Mode */
   .mode-row { display: flex; gap: 14px; flex-wrap: wrap; }
   .mode-card {
@@ -147,7 +176,7 @@
   <!-- Step 2: Person -->
   <section class="card">
     <h2><span class="step-num">2</span>Person erfassen</h2>
-    <p class="help">Stell dich in dieselbe Pose wie die Person im Motiv. Das Originalmotiv erscheint als halbtransparente Schablone über dem Kamerabild – nutze sie als Hilfe beim Ausrichten.</p>
+    <p class="help">Lade <strong>1–5 Fotos derselben Person</strong> aus verschiedenen Winkeln (frontal, ¾ links, ¾ rechts, Close-up Gesicht). Das erste Bild ist das Hauptfoto und bestimmt im "Komplette Person"-Modus auch Outfit und Pose. Mehr Winkel = stabilere Identität im Ergebnis.</p>
     <div class="tabs">
       <button class="tab active" data-tab="cam">Webcam</button>
       <button class="tab" data-tab="upload">Foto hochladen</button>
@@ -160,20 +189,21 @@
       </div>
       <div class="cam-controls">
         <button class="btn" id="startCam">Kamera starten</button>
-        <button class="btn secondary" id="capture" disabled>Aufnehmen</button>
+        <button class="btn secondary" id="capture" disabled>Aufnehmen + hinzufügen</button>
         <label class="opacity-row">Schablonen-Deckkraft <input type="range" id="overlayOpacity" min="0" max="100" value="35" /></label>
       </div>
       <canvas id="snapshot" hidden></canvas>
-      <img id="camPreview" class="preview" hidden />
     </div>
 
     <div id="tab-upload" hidden>
       <div class="upload-zone" id="uploadZone">
-        Foto hierher ziehen oder klicken zum Auswählen
-        <input type="file" id="personUpload" accept="image/*" hidden />
+        Fotos hierher ziehen oder klicken zum Auswählen (mehrere möglich)
+        <input type="file" id="personUpload" accept="image/*" multiple hidden />
       </div>
-      <img id="uploadPreview" class="preview" hidden />
     </div>
+
+    <div class="person-grid" id="personGrid"></div>
+    <div class="person-count" id="personCount"></div>
   </section>
 
   <!-- Step 3: Modus -->
@@ -223,9 +253,10 @@
 
 <script type="module">
   // ------------------ State ------------------
+  const MAX_PERSONS = 5;
   const state = {
     motif: null,         // { src, dataUrl }
-    person: null,        // dataUrl
+    persons: [],         // dataUrl[] — first one is the primary anchor
     mode: "face",
     overlayOpacity: 0.35,
   };
@@ -285,7 +316,53 @@
   }
 
   function checkReady() {
-    $("#generateBtn").disabled = !(state.motif && state.person);
+    $("#generateBtn").disabled = !(state.motif && state.persons.length > 0);
+  }
+
+  function renderPersonGrid() {
+    const grid = $("#personGrid");
+    grid.innerHTML = "";
+    state.persons.forEach((dataUrl, idx) => {
+      const tile = document.createElement("div");
+      tile.className = "person-tile";
+      tile.innerHTML = `
+        <img src="${dataUrl}" alt="Person ${idx + 1}" />
+        ${idx === 0 ? '<span class="badge-primary">Hauptfoto</span>' : ""}
+        <button class="remove-x" title="Entfernen" data-idx="${idx}">×</button>
+      `;
+      tile.querySelector(".remove-x").addEventListener("click", e => {
+        e.stopPropagation();
+        const i = Number(e.currentTarget.dataset.idx);
+        state.persons.splice(i, 1);
+        renderPersonGrid();
+        checkReady();
+      });
+      grid.appendChild(tile);
+    });
+    if (state.persons.length < MAX_PERSONS) {
+      const add = document.createElement("div");
+      add.className = "person-add-tile";
+      add.textContent = "+ weiteres Foto";
+      add.addEventListener("click", () => {
+        const activeTab = $(".tab.active")?.dataset.tab;
+        if (activeTab === "upload") $("#personUpload").click();
+        else $("#capture").click();
+      });
+      grid.appendChild(add);
+    }
+    $("#personCount").textContent = state.persons.length === 0
+      ? ""
+      : `${state.persons.length} von max. ${MAX_PERSONS} Fotos · Hauptfoto links`;
+  }
+
+  function addPerson(dataUrl) {
+    if (state.persons.length >= MAX_PERSONS) {
+      setStatus(`Max. ${MAX_PERSONS} Fotos.`, "warn");
+      return;
+    }
+    state.persons.push(dataUrl);
+    renderPersonGrid();
+    checkReady();
   }
 
   // ------------------ Step 1: Motif grid ------------------
@@ -403,6 +480,7 @@
 
   $("#capture").addEventListener("click", () => {
     const v = $("#cam");
+    if (!v.videoWidth) return;
     const snap = $("#snapshot");
     snap.width = v.videoWidth;
     snap.height = v.videoHeight;
@@ -412,12 +490,8 @@
     ctx.scale(-1, 1);
     ctx.drawImage(v, 0, 0, snap.width, snap.height);
     const dataUrl = snap.toDataURL("image/jpeg", 0.92);
-    state.person = dataUrl;
-    const prev = $("#camPreview");
-    prev.src = dataUrl;
-    prev.hidden = false;
-    setStatus("Foto erfasst.", "warn");
-    checkReady();
+    addPerson(dataUrl);
+    setStatus(`Foto ${state.persons.length} erfasst.`, "warn");
   });
 
   // ------------------ Upload tab ------------------
@@ -425,21 +499,20 @@
   $("#uploadZone").addEventListener("dragover", e => { e.preventDefault(); });
   $("#uploadZone").addEventListener("drop", async e => {
     e.preventDefault();
-    const f = e.dataTransfer.files?.[0];
-    if (f) await loadPersonFile(f);
+    const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith("image/"));
+    for (const f of files) {
+      if (state.persons.length >= MAX_PERSONS) break;
+      addPerson(await fileToDataUrl(f));
+    }
   });
   $("#personUpload").addEventListener("change", async e => {
-    const f = e.target.files?.[0];
-    if (f) await loadPersonFile(f);
+    const files = Array.from(e.target.files || []);
+    for (const f of files) {
+      if (state.persons.length >= MAX_PERSONS) break;
+      addPerson(await fileToDataUrl(f));
+    }
+    e.target.value = "";
   });
-  async function loadPersonFile(file) {
-    const dataUrl = await fileToDataUrl(file);
-    state.person = dataUrl;
-    const prev = $("#uploadPreview");
-    prev.src = dataUrl;
-    prev.hidden = false;
-    checkReady();
-  }
 
   // ------------------ Step 3: Mode ------------------
   $$(".mode-card").forEach(card => {
@@ -455,22 +528,26 @@
   $("#regenerateBtn")?.addEventListener("click", generate);
 
   async function generate() {
-    if (!state.motif || !state.person) return;
+    if (!state.motif || state.persons.length === 0) return;
     $("#generateBtn").disabled = true;
     setStatus(`<div class="spinner-wrap"><div class="spinner"></div>Generiere Plakat mit Nano Banana Pro… das kann 15–60 Sekunden dauern.</div>`);
     try {
       const t0 = performance.now();
-      // Auf Versand-Größe verkleinern (Vercel-Body-Limit beachten)
-      const [refSmall, personSmall] = await Promise.all([
-        resizeDataUrl(state.motif.dataUrl, 1600, 0.92),
-        resizeDataUrl(state.person, 1600, 0.92)
-      ]);
+      // Mehrere Bilder → Pro-Bild kleiner skalieren, damit Body unter Vercels 4,5 MB bleibt
+      const perImageMax = state.persons.length >= 4 ? 1100
+        : state.persons.length >= 2 ? 1300
+        : 1600;
+      const refSmall = await resizeDataUrl(state.motif.dataUrl, 1600, 0.92);
+      const personsSmall = [];
+      for (const p of state.persons) {
+        personsSmall.push(await resizeDataUrl(p, perImageMax, 0.9));
+      }
       const r = await fetch("/api/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           referenceImage: refSmall,
-          personImage: personSmall,
+          personImages: personsSmall,
           mode: state.mode,
           aspectRatio: "3:4",
           imageSize: "4K"
@@ -494,6 +571,7 @@
 
   // ------------------ Init ------------------
   renderMotifs();
+  renderPersonGrid();
   // Auto-select first motif
   setTimeout(() => {
     const first = $(".motif-tile");

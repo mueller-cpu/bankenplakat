@@ -14,39 +14,39 @@ const PROMPTS = {
   face: `You are producing a high-end commercial portrait for a printed bank campaign poster.
 
 PRIORITY HIERARCHY (non-negotiable, in this order)
-1. IDENTITY of the person in image 1 / image 2 — must be a 1:1 photographic likeness.
+1. IDENTITY of the person — must be a 1:1 photographic likeness, triangulated from ALL person reference images provided.
 2. Natural, seamless photographic integration — the result must look like a single real photograph, not a composite.
-3. Wardrobe STYLE (business attire), overall pose feeling, atmosphere, lighting and color grading taken from image 3.
+3. Wardrobe STYLE (business attire), overall pose feeling, atmosphere, lighting and color grading taken from the scene reference.
 4. Concrete arrangement of sheep, hills, sky and exact framing — may be re-composed freely if needed for a natural result.
 If any two conflict, the higher number wins. Never sacrifice 1 or 2 for 3 or 4.
 
 INPUT
-- Image 1 = IDENTITY ANCHOR. Real person whose face must appear 1:1 in the output.
-- Image 2 = high-resolution close-up detail of the same person's face. Use this to verify and lock identity at the pixel level.
-- Image 3 = STYLE/MOOD reference. Defines wardrobe style, posture spirit, location type, lighting quality and photographic look. NOT a pixel template.
+- The first N images (labelled "person reference") all show the SAME real person from different angles / lighting / expressions. Use ALL of them together to triangulate the true identity. The person in the output must match all of them simultaneously.
+- One image is a high-resolution close-up detail of the person's face. Use this to verify and lock identity at the pixel level.
+- The final image (labelled "scene reference") is the STYLE/MOOD reference. It defines wardrobe style, posture spirit, location type, lighting quality and photographic look. NOT a pixel template.
 
 METHOD
-Compose a NEW photograph from scratch. The face from images 1 + 2 is the only fixed point — do NOT redraw it, do NOT idealize it, do NOT smooth or beautify it. Around that face, render a body, wardrobe, pose, light and scene that match the style of image 3 and integrate seamlessly with the face. You are free to re-arrange sheep, hills, framing, head tilt, hand position and exact pose so the result looks like one coherent, naturally lit photograph. Skin tone, light direction and shadows must match consistently between face, neck, hands and surroundings — no "pasted-on" face.
+Compose a NEW photograph from scratch. The person's identity (face + features as shown across ALL person reference images) is the only fixed point — do NOT redraw it, do NOT idealize it, do NOT smooth or beautify it. Around that face, render a body, wardrobe, pose, light and scene that match the style of the scene reference and integrate seamlessly with the face. You are free to re-arrange sheep, hills, framing, head tilt, hand position and exact pose so the result looks like one coherent, naturally lit photograph. Skin tone, light direction and shadows must match consistently between face, neck, hands and surroundings — no "pasted-on" face.
 
-IDENTITY MUST PRESERVE (1:1 from image 1 + image 2)
+IDENTITY MUST PRESERVE (1:1 — verified across ALL person reference images)
 - Bone structure, face shape, jawline, chin, cheekbones.
 - Eye shape, eye color, eye spacing, eyelid shape.
 - Nose shape, nose width, nostril shape.
 - Mouth shape, lip thickness, philtrum.
 - Hairline, hair color, hair texture, hair length and parting.
 - Skin tone, skin texture, freckles, moles, scars, wrinkles, pores.
-- Glasses (exact same model) if present in image 1 / image 2.
+- Glasses (exact same model) if present in person reference images.
 - Apparent age, weight, head and neck build.
 
 DO NOT
 - Do NOT make the person look younger, slimmer, more symmetric or more attractive.
 - Do NOT generalize features toward an "average" face.
 - Do NOT change eye color, hair color or skin tone for stylistic reasons.
-- Do NOT paste the face onto image 3 — re-light, re-shadow and re-compose as needed for natural integration.
-- Do NOT prioritize matching the exact arrangement of image 3 over identity or natural integration.
+- Do NOT paste the face onto the scene reference — re-light, re-shadow and re-compose as needed for natural integration.
+- Do NOT prioritize matching the exact arrangement of the scene reference over identity or natural integration.
 
-TAKE FROM IMAGE 3 (style level, not pixel level)
-- Wardrobe style: business attire (suit/blazer/shirt) consistent with image 3.
+TAKE FROM SCENE REFERENCE (style level, not pixel level)
+- Wardrobe style: business attire (suit/blazer/shirt) consistent with the scene reference.
 - General pose feeling and framing intent (head-and-shoulders / mid-shot portrait).
 - Scene type: outdoor pastoral with sheep, hills, sky.
 - Lighting quality: soft overcast daylight, gentle direction.
@@ -61,41 +61,41 @@ OUTPUT REQUIREMENTS
   full: `You are producing a high-end commercial portrait for a printed bank campaign poster.
 
 PRIORITY HIERARCHY (non-negotiable, in this order)
-1. IDENTITY and BODY of the person in image 1 / image 2 — face AND body must be a 1:1 photographic likeness, including the outfit.
+1. IDENTITY and BODY of the person — face AND body must be a 1:1 photographic likeness, triangulated from ALL person reference images (face, body, outfit).
 2. Natural, seamless photographic integration — the result must look like a single real photograph, not a composite.
-3. Atmosphere, lighting, color grading and overall photographic style of image 3.
+3. Atmosphere, lighting, color grading and overall photographic style of the scene reference.
 4. Concrete arrangement of sheep, hills, sky and exact framing — may be re-composed freely if needed for a natural result.
 If any two conflict, the higher number wins. Never sacrifice 1 or 2 for 3 or 4.
 
 INPUT
-- Image 1 = IDENTITY + BODY ANCHOR. Real person, their outfit, body shape, posture and proportions.
-- Image 2 = high-resolution close-up detail of the same person's face. Use this to verify and lock face identity at the pixel level.
-- Image 3 = MOOD/STYLE reference. Defines location type, atmosphere, lighting and photographic look. NOT a pixel template.
+- The first N images (labelled "person reference") all show the SAME real person — their face, body, outfit, body shape, posture and proportions. Use ALL of them to triangulate true identity and body. The first such image is the PRIMARY anchor for outfit and pose; additional ones confirm and refine identity from other angles.
+- One image is a high-resolution close-up detail of the person's face. Use this to verify and lock face identity at the pixel level.
+- The final image (labelled "scene reference") is the MOOD/STYLE reference. It defines location type, atmosphere, lighting and photographic look. NOT a pixel template.
 
 METHOD
-Compose a NEW photograph from scratch. The person from image 1 (face verified by image 2, plus body, outfit and proportions) is the only fixed point — do NOT redraw, slim, idealize or restyle them. Around them, render an outdoor pastoral scene that matches the mood, light and color grading of image 3, with sheep, hills and sky composed freely so the result looks like one coherent, naturally lit photograph. The person must integrate seamlessly: consistent ground contact, consistent light direction and shadow, skin tone and outfit lighting matching the surrounding scene — no "pasted-in" subject.
+Compose a NEW photograph from scratch. The person's identity (face triangulated from ALL reference images, plus body, outfit and proportions from the primary anchor) is the only fixed point — do NOT redraw, slim, idealize or restyle them. Around them, render an outdoor pastoral scene that matches the mood, light and color grading of the scene reference, with sheep, hills and sky composed freely so the result looks like one coherent, naturally lit photograph. The person must integrate seamlessly: consistent ground contact, consistent light direction and shadow, skin tone and outfit lighting matching the surrounding scene — no "pasted-in" subject.
 
-IDENTITY MUST PRESERVE (1:1 from image 1 + image 2)
+IDENTITY MUST PRESERVE (1:1 — verified across ALL person reference images)
 - Full face: bone structure, eyes, nose, mouth, hairline, hair, skin tone, skin texture, freckles, moles, scars, wrinkles, glasses, apparent age.
 - Full body: height, build, weight, body proportions, shoulder width, posture.
-- Full outfit: every visible garment, color, pattern, fit, accessories, shoes, jewelry, watch — exactly as in image 1.
+- Full outfit: every visible garment, color, pattern, fit, accessories, shoes, jewelry, watch — exactly as in the primary person reference.
 
 DO NOT
-- Do NOT replace the outfit with business attire unless image 1 already shows business attire.
+- Do NOT replace the outfit with business attire unless the primary person reference already shows business attire.
 - Do NOT slim, idealize, beautify or change the body or face.
 - Do NOT change hair, skin tone, eye color or features.
-- Do NOT invent props, accessories, gestures or wardrobe details that are not in image 1.
-- Do NOT paste the person onto image 3 — re-light, re-shadow and re-compose the surroundings for natural integration.
-- Do NOT prioritize matching the exact arrangement of image 3 over identity or natural integration.
+- Do NOT invent props, accessories, gestures or wardrobe details that are not in the person references.
+- Do NOT paste the person onto the scene reference — re-light, re-shadow and re-compose the surroundings for natural integration.
+- Do NOT prioritize matching the exact arrangement of the scene reference over identity or natural integration.
 
-TAKE FROM IMAGE 3 (style level, not pixel level)
+TAKE FROM SCENE REFERENCE (style level, not pixel level)
 - Scene type: outdoor pastoral with sheep, hills, sky.
 - Lighting quality: soft overcast daylight, gentle direction.
 - Color grading and analog/film look, shallow depth of field.
 - General framing intent suitable for a printed portrait poster.
 
 OUTPUT REQUIREMENTS
-- Photorealistic, analog/film look matching the mood of image 3.
+- Photorealistic, analog/film look matching the mood of the scene reference.
 - No text, no logos, no watermark, no border.
 - Subject sharp; light and grading consistent across person and landscape.
 - Portrait orientation, suitable for a printed poster.`
@@ -123,42 +123,52 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { referenceImage, personImage, mode = "face", aspectRatio = "3:4", imageSize = "4K" } = req.body || {};
+    const { referenceImage, personImage, personImages, mode = "face", aspectRatio = "3:4", imageSize = "4K" } = req.body || {};
 
-    if (!referenceImage || !personImage) {
-      return res.status(400).json({ error: "referenceImage and personImage are required (data URLs)." });
+    const personList = Array.isArray(personImages) && personImages.length > 0
+      ? personImages
+      : (personImage ? [personImage] : []);
+
+    if (!referenceImage || personList.length === 0) {
+      return res.status(400).json({ error: "referenceImage and at least one personImage are required (data URLs)." });
+    }
+    if (personList.length > 6) {
+      return res.status(400).json({ error: "max 6 person reference images." });
     }
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: "GEMINI_API_KEY is not set in environment." });
     }
 
     const ref = parseDataUrl(referenceImage);
-    const person = parseDataUrl(personImage);
+    const persons = personList.map(parseDataUrl);
     const prompt = mode === "full" ? PROMPTS.full : PROMPTS.face;
 
-    const personBuffer = Buffer.from(person.data, "base64");
+    const primaryBuffer = Buffer.from(persons[0].data, "base64");
     let faceCropBase64 = null;
     try {
-      faceCropBase64 = await makeFaceCrop(personBuffer);
+      faceCropBase64 = await makeFaceCrop(primaryBuffer);
     } catch (e) {
       console.warn("face crop failed:", e?.message);
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const userParts = [
-      { text: prompt },
-      { text: "Image 1 — IDENTITY ANCHOR (real person whose likeness must appear 1:1 in the output):" },
-      { inlineData: { mimeType: person.mime, data: person.data } }
-    ];
+    const userParts = [{ text: prompt }];
+
+    persons.forEach((p, i) => {
+      const label = i === 0
+        ? `Person reference 1 of ${persons.length} — PRIMARY identity anchor (real person whose likeness must appear 1:1 in the output${mode === "full" ? "; this is also the source for body and outfit" : ""}):`
+        : `Person reference ${i + 1} of ${persons.length} — additional view of the SAME person (use to triangulate identity 1:1):`;
+      userParts.push({ text: label });
+      userParts.push({ inlineData: { mimeType: p.mime, data: p.data } });
+    });
 
     if (faceCropBase64) {
-      userParts.push({ text: "Image 2 — close-up detail of the SAME person's face (pixel-level identity reference, must match 1:1):" });
+      userParts.push({ text: "Face close-up — high-resolution detail crop of the SAME person's face (pixel-level identity reference, must match 1:1):" });
       userParts.push({ inlineData: { mimeType: "image/jpeg", data: faceCropBase64 } });
-      userParts.push({ text: "Image 3 — SCENE/STYLE reference (campaign motif; defines wardrobe, pose, location, lighting):" });
-    } else {
-      userParts.push({ text: "Image 3 — SCENE/STYLE reference (campaign motif; defines wardrobe, pose, location, lighting). NOTE: image 2 was unavailable, treat image 1 alone as identity anchor:" });
     }
+
+    userParts.push({ text: "Scene reference — campaign motif. Use ONLY for atmosphere, lighting, color grading, wardrobe style and overall photographic look. Concrete arrangement (sheep, hills, framing) may be re-composed freely:" });
     userParts.push({ inlineData: { mimeType: ref.mime, data: ref.data } });
 
     const response = await ai.models.generateContent({
