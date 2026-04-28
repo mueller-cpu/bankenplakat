@@ -15,17 +15,18 @@ const PROMPTS = {
 
 PRIORITY HIERARCHY (non-negotiable, in this order)
 1. IDENTITY of the person in image 1 / image 2 — must be a 1:1 photographic likeness.
-2. Wardrobe, pose, posture, hands of image 3.
-3. Scene, lighting, color grading, depth of field, photographic style of image 3.
-If any two conflict, the higher number wins. Never sacrifice 1 for 3.
+2. Natural, seamless photographic integration — the result must look like a single real photograph, not a composite.
+3. Wardrobe STYLE (business attire), overall pose feeling, atmosphere, lighting and color grading taken from image 3.
+4. Concrete arrangement of sheep, hills, sky and exact framing — may be re-composed freely if needed for a natural result.
+If any two conflict, the higher number wins. Never sacrifice 1 or 2 for 3 or 4.
 
 INPUT
 - Image 1 = IDENTITY ANCHOR. Real person whose face must appear 1:1 in the output.
 - Image 2 = high-resolution close-up detail of the same person's face. Use this to verify and lock identity at the pixel level.
-- Image 3 = SCENE/STYLE reference. Defines wardrobe, pose, location, lighting and photographic style.
+- Image 3 = STYLE/MOOD reference. Defines wardrobe style, posture spirit, location type, lighting quality and photographic look. NOT a pixel template.
 
 METHOD
-Treat the face from image 1 + image 2 as ground truth. Do NOT redraw it, do NOT idealize it, do NOT smooth or beautify it. Then dress that exact person in the wardrobe and pose of image 3, place them in the scene of image 3, and match the lighting, color grading and depth of field of image 3.
+Compose a NEW photograph from scratch. The face from images 1 + 2 is the only fixed point — do NOT redraw it, do NOT idealize it, do NOT smooth or beautify it. Around that face, render a body, wardrobe, pose, light and scene that match the style of image 3 and integrate seamlessly with the face. You are free to re-arrange sheep, hills, framing, head tilt, hand position and exact pose so the result looks like one coherent, naturally lit photograph. Skin tone, light direction and shadows must match consistently between face, neck, hands and surroundings — no "pasted-on" face.
 
 IDENTITY MUST PRESERVE (1:1 from image 1 + image 2)
 - Bone structure, face shape, jawline, chin, cheekbones.
@@ -41,36 +42,38 @@ DO NOT
 - Do NOT make the person look younger, slimmer, more symmetric or more attractive.
 - Do NOT generalize features toward an "average" face.
 - Do NOT change eye color, hair color or skin tone for stylistic reasons.
-- Do NOT alter facial proportions to fit the body of image 3.
-- Do NOT prioritize matching the style of image 3 over preserving identity.
+- Do NOT paste the face onto image 3 — re-light, re-shadow and re-compose as needed for natural integration.
+- Do NOT prioritize matching the exact arrangement of image 3 over identity or natural integration.
 
-MATCH FROM IMAGE 3
-- Wardrobe (suit/blazer/shirt) exactly.
-- Body posture, hand position, head tilt and gaze direction approximately.
-- Scene (sheep, pasture, hills, sky), framing, focal length, depth of field, color grading.
-- Soft overcast light, analog/film look, shallow DoF with sheep slightly out of focus.
+TAKE FROM IMAGE 3 (style level, not pixel level)
+- Wardrobe style: business attire (suit/blazer/shirt) consistent with image 3.
+- General pose feeling and framing intent (head-and-shoulders / mid-shot portrait).
+- Scene type: outdoor pastoral with sheep, hills, sky.
+- Lighting quality: soft overcast daylight, gentle direction.
+- Color grading and analog/film look, shallow depth of field.
 
 OUTPUT REQUIREMENTS
 - Photorealistic, no illustration, no painterly look, no AI-glossy skin.
 - No text, no logos, no watermark, no border.
-- Subject's face sharp; bokeh and grading consistent with image 3.
+- Subject's face sharp; light, shadows and skin tone consistent across face, neck and surroundings.
 - Portrait orientation, suitable for a printed poster.`,
 
   full: `You are producing a high-end commercial portrait for a printed bank campaign poster.
 
 PRIORITY HIERARCHY (non-negotiable, in this order)
 1. IDENTITY and BODY of the person in image 1 / image 2 — face AND body must be a 1:1 photographic likeness, including the outfit.
-2. Scene (location, sheep, landscape) of image 3.
-3. Lighting, color grading, depth of field and photographic style of image 3.
-If any two conflict, the higher number wins. Never sacrifice 1 for 2 or 3.
+2. Natural, seamless photographic integration — the result must look like a single real photograph, not a composite.
+3. Atmosphere, lighting, color grading and overall photographic style of image 3.
+4. Concrete arrangement of sheep, hills, sky and exact framing — may be re-composed freely if needed for a natural result.
+If any two conflict, the higher number wins. Never sacrifice 1 or 2 for 3 or 4.
 
 INPUT
 - Image 1 = IDENTITY + BODY ANCHOR. Real person, their outfit, body shape, posture and proportions.
 - Image 2 = high-resolution close-up detail of the same person's face. Use this to verify and lock face identity at the pixel level.
-- Image 3 = SCENE/STYLE reference. Defines location, framing, lighting and photographic style.
+- Image 3 = MOOD/STYLE reference. Defines location type, atmosphere, lighting and photographic look. NOT a pixel template.
 
 METHOD
-Treat image 1 as if you were placing that exact photograph into the scene of image 3. Keep the person from image 1 unchanged — same face (verified by image 2), same body, same outfit, same proportions — and place them naturally in the scene of image 3 with correct ground contact, shadows and lighting. Re-render only what is needed to integrate them (light, shadow, ground, atmosphere). Do NOT regenerate the person.
+Compose a NEW photograph from scratch. The person from image 1 (face verified by image 2, plus body, outfit and proportions) is the only fixed point — do NOT redraw, slim, idealize or restyle them. Around them, render an outdoor pastoral scene that matches the mood, light and color grading of image 3, with sheep, hills and sky composed freely so the result looks like one coherent, naturally lit photograph. The person must integrate seamlessly: consistent ground contact, consistent light direction and shadow, skin tone and outfit lighting matching the surrounding scene — no "pasted-in" subject.
 
 IDENTITY MUST PRESERVE (1:1 from image 1 + image 2)
 - Full face: bone structure, eyes, nose, mouth, hairline, hair, skin tone, skin texture, freckles, moles, scars, wrinkles, glasses, apparent age.
@@ -82,19 +85,19 @@ DO NOT
 - Do NOT slim, idealize, beautify or change the body or face.
 - Do NOT change hair, skin tone, eye color or features.
 - Do NOT invent props, accessories, gestures or wardrobe details that are not in image 1.
-- Do NOT alter the person's pose more than necessary to make them stand naturally in the scene.
-- Do NOT prioritize matching the style of image 3 over preserving identity.
+- Do NOT paste the person onto image 3 — re-light, re-shadow and re-compose the surroundings for natural integration.
+- Do NOT prioritize matching the exact arrangement of image 3 over identity or natural integration.
 
-MATCH FROM IMAGE 3
-- Location (sheep herd, pasture, hills, sky) and framing.
-- Camera angle, focal length, depth of field.
-- Lighting direction, lighting quality, color grading, soft overcast film look.
-- Realistic shadows on the ground and on the person, consistent with image 3's light.
+TAKE FROM IMAGE 3 (style level, not pixel level)
+- Scene type: outdoor pastoral with sheep, hills, sky.
+- Lighting quality: soft overcast daylight, gentle direction.
+- Color grading and analog/film look, shallow depth of field.
+- General framing intent suitable for a printed portrait poster.
 
 OUTPUT REQUIREMENTS
-- Photorealistic, analog/film look matching image 3.
+- Photorealistic, analog/film look matching the mood of image 3.
 - No text, no logos, no watermark, no border.
-- Subject sharp; sheep and landscape in matching focus and grading as image 3.
+- Subject sharp; light and grading consistent across person and landscape.
 - Portrait orientation, suitable for a printed poster.`
 };
 
