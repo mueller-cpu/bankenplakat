@@ -225,7 +225,17 @@
   <!-- Step 4: Generate -->
   <section class="card">
     <h2><span class="step-num">4</span>Plakat generieren</h2>
-    <p class="help">Erzeugt mit Gemini 3 Pro Image (Nano Banana Pro), 4K · 3:4. Dauert je nach Auslastung 15–60 s.</p>
+    <p class="help">Engine wählen, dann generieren. Dauert 15–60 s.</p>
+    <div class="mode-row" style="margin-bottom: 14px;">
+      <div class="mode-card selected" data-engine="gemini">
+        <strong>Gemini 3 Pro Image</strong>
+        <span>Nano Banana Pro · 4K · 3:4. Triangulation über mehrere Person-Refs, sehr identity-stark.</span>
+      </div>
+      <div class="mode-card" data-engine="openai">
+        <strong>OpenAI gpt-image-1</strong>
+        <span>1024×1536 · 3:4 · quality high. Andere Mimik-Charakteristik — Test-Engine.</span>
+      </div>
+    </div>
     <button class="btn big" id="generateBtn" disabled>Plakat generieren</button>
     <div id="status"></div>
   </section>
@@ -258,6 +268,7 @@
     motif: null,         // { src, dataUrl }
     persons: [],         // dataUrl[] — first one is the primary anchor
     mode: "face",
+    engine: "gemini",
     overlayOpacity: 0.35,
   };
 
@@ -515,11 +526,20 @@
   });
 
   // ------------------ Step 3: Mode ------------------
-  $$(".mode-card").forEach(card => {
+  $$(".mode-card[data-mode]").forEach(card => {
     card.addEventListener("click", () => {
-      $$(".mode-card").forEach(c => c.classList.remove("selected"));
+      $$(".mode-card[data-mode]").forEach(c => c.classList.remove("selected"));
       card.classList.add("selected");
       state.mode = card.dataset.mode;
+    });
+  });
+
+  // ------------------ Step 4: Engine ------------------
+  $$(".mode-card[data-engine]").forEach(card => {
+    card.addEventListener("click", () => {
+      $$(".mode-card[data-engine]").forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+      state.engine = card.dataset.engine;
     });
   });
 
@@ -530,7 +550,8 @@
   async function generate() {
     if (state.persons.length === 0) return;
     $("#generateBtn").disabled = true;
-    setStatus(`<div class="spinner-wrap"><div class="spinner"></div>Generiere Plakat mit Nano Banana Pro… das kann 15–60 Sekunden dauern.</div>`);
+    const engineLabel = state.engine === "openai" ? "OpenAI gpt-image-1" : "Nano Banana Pro";
+    setStatus(`<div class="spinner-wrap"><div class="spinner"></div>Generiere Plakat mit ${engineLabel}… das kann 15–60 Sekunden dauern.</div>`);
     try {
       const t0 = performance.now();
       // Mehrere Bilder → Pro-Bild kleiner skalieren, damit Body unter Vercels 4,5 MB bleibt
@@ -547,6 +568,7 @@
         body: JSON.stringify({
           personImages: personsSmall,
           mode: state.mode,
+          engine: state.engine,
           aspectRatio: "3:4",
           imageSize: "4K"
         })
@@ -558,7 +580,7 @@
       $("#resultImage").src = j.image;
       $("#downloadBtn").href = j.image;
       $("#resultCard").hidden = false;
-      setStatus(`Fertig in ${dur} s.${j.note ? " · Modell-Hinweis: " + j.note : ""}`, "warn");
+      setStatus(`Fertig in ${dur} s · ${j.engine === "openai" ? "gpt-image-1" : "Nano Banana Pro"}.${j.note ? " · Modell-Hinweis: " + j.note : ""}`, "warn");
       $("#resultCard").scrollIntoView({ behavior: "smooth" });
     } catch (e) {
       setStatus(`Fehler: ${e.message}`, "bad");

@@ -1,7 +1,9 @@
-// Vercel Serverless Function – ruft Gemini 3 Pro Image (Nano Banana Pro)
-// und komponiert die hochgeladene Person in das Plakatmotiv.
+// Vercel Serverless Function – komponiert die hochgeladene Person ins
+// Bankenplakat-Motiv. Engine wählbar: "gemini" (Nano Banana Pro) oder
+// "openai" (gpt-image-1).
 
 import { GoogleGenAI } from "@google/genai";
+import OpenAI, { toFile } from "openai";
 import sharp from "sharp";
 
 export const config = {
@@ -116,7 +118,39 @@ OUTPUT
 - Portrait orientation 3:4, suitable for a printed poster with headline overlay in the upper third.`
 };
 
-async function makeFaceCrop(buffer) {
+// gpt-image-1 folgt langen "DO NOT"-Listen schlechter als Gemini und reagiert
+// stark auf knappe, positiv formulierte Anweisungen mit klarer Reihenfolge.
+const OPENAI_PROMPTS = {
+  face: `Create a photorealistic 3:4 portrait of the person shown in the reference images, for a printed bank campaign poster.
+
+Reference image order (critical):
+- Image 1 is the PRIMARY anchor: identity AND expression. The output's face must look exactly like image 1, and the output's expression (mouth, eyes, brows) must match image 1 exactly — same smile or neutral, same intensity, same teeth visibility, same eye crinkle.
+- Images 2..N are additional views of the SAME person. Use them only to confirm identity (bone structure, features, hair). Do NOT average their expressions into the result.
+- The final image is a tight face-crop from the primary reference for pixel-level identity verification.
+
+Identity to preserve 1:1: bone structure, eye shape and color, nose, mouth, hairline, hair color and texture, skin tone, freckles, moles, scars, glasses (exact model if present), apparent age and weight. Keep the person looking like themselves — do not idealize, smooth, slim or beautify.
+
+Wardrobe: business attire suitable for a bank (dark blazer, suit or shirt). Compose fresh.
+
+${SCENE_SPEC}
+
+Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Headline-ready: upper third must be calm sky.`,
+
+  full: `Create a photorealistic 3:4 portrait of the person shown in the reference images, for a printed bank campaign poster.
+
+Reference image order (critical):
+- Image 1 is the PRIMARY anchor: identity, expression, body, outfit and pose. Reproduce the face AND the expression of image 1 exactly (same smile or neutral, same intensity). Reproduce the outfit (every garment, color, pattern, fit, accessories, watch, shoes) and body proportions and pose from image 1.
+- Images 2..N are additional views of the SAME person. Use them only to confirm identity. Do NOT average their expressions, outfits or poses into the result.
+- The final image is a tight face-crop from the primary reference for pixel-level identity verification.
+
+Identity to preserve 1:1: full face features, hair, skin tone and texture, glasses, body proportions, height and build. Keep the person looking like themselves — do not idealize, smooth, slim or beautify.
+
+${SCENE_SPEC}
+
+Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Headline-ready: upper third must be calm sky.`
+};
+
+async function makeFaceCropBuffer(buffer) {
   const meta = await sharp(buffer).metadata();
   const w = meta.width;
   const h = meta.height;
@@ -125,11 +159,93 @@ async function makeFaceCrop(buffer) {
   const cropWidth = Math.round(w * 0.7);
   const cropLeft = Math.max(0, Math.round((w - cropWidth) / 2));
   const cropTop = 0;
-  const out = await sharp(buffer)
+  return sharp(buffer)
     .extract({ left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight })
     .jpeg({ quality: 92 })
     .toBuffer();
-  return out.toString("base64");
+}
+
+async function callGemini({ persons, mode, faceCropBuffer, aspectRatio, imageSize }) {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not set in environment.");
+  }
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const prompt = mode === "full" ? PROMPTS.full : PROMPTS.face;
+
+  const userParts = [{ text: prompt }];
+  persons.forEach((p, i) => {
+    const label = i === 0
+      ? `Person reference 1 of ${persons.length} — PRIMARY anchor. Identity, EXPRESSION${mode === "full" ? ", body, outfit and pose" : ""} must appear 1:1 in the output. The expression visible here (smile / neutral / half-smile / etc.) is the expression of the output:`
+      : `Person reference ${i + 1} of ${persons.length} — additional view of the SAME person. Use ONLY to triangulate identity (face features); do NOT use this image's expression${mode === "full" ? ", outfit or pose" : ""}:`;
+    userParts.push({ text: label });
+    userParts.push({ inlineData: { mimeType: p.mime, data: p.data } });
+  });
+  if (faceCropBuffer) {
+    userParts.push({ text: "Face close-up — high-resolution detail crop from the PRIMARY reference (pixel-level identity AND expression reference, must match 1:1):" });
+    userParts.push({ inlineData: { mimeType: "image/jpeg", data: faceCropBuffer.toString("base64") } });
+  }
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-pro-image-preview",
+    contents: [{ role: "user", parts: userParts }],
+    config: {
+      responseModalities: ["IMAGE"],
+      imageConfig: { aspectRatio, imageSize }
+    }
+  });
+
+  const parts = response?.candidates?.[0]?.content?.parts || [];
+  let outBase64 = null;
+  let outMime = "image/png";
+  let textNote = "";
+  for (const part of parts) {
+    if (part.inlineData?.data) {
+      outBase64 = part.inlineData.data;
+      outMime = part.inlineData.mimeType || outMime;
+      break;
+    }
+    if (part.text) textNote += part.text + "\n";
+  }
+  if (!outBase64) {
+    const err = new Error(textNote.trim() || "Model did not return an image.");
+    err.note = textNote.trim();
+    throw err;
+  }
+  return { imageDataUrl: `data:${outMime};base64,${outBase64}`, note: textNote.trim() };
+}
+
+async function callOpenAI({ persons, mode, faceCropBuffer, quality }) {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not set in environment.");
+  }
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const prompt = mode === "full" ? OPENAI_PROMPTS.full : OPENAI_PROMPTS.face;
+
+  const files = [];
+  for (let i = 0; i < persons.length; i++) {
+    const p = persons[i];
+    const buf = Buffer.from(p.data, "base64");
+    const ext = (p.mime.split("/")[1] || "png").replace("jpeg", "jpg");
+    files.push(await toFile(buf, `person-${i + 1}.${ext}`, { type: p.mime }));
+  }
+  if (faceCropBuffer) {
+    files.push(await toFile(faceCropBuffer, "face-crop.jpg", { type: "image/jpeg" }));
+  }
+
+  const result = await openai.images.edit({
+    model: "gpt-image-1",
+    image: files,
+    prompt,
+    size: "1024x1536",
+    quality: quality || "high",
+    n: 1
+  });
+
+  const b64 = result?.data?.[0]?.b64_json;
+  if (!b64) {
+    throw new Error("OpenAI did not return an image.");
+  }
+  return { imageDataUrl: `data:image/png;base64,${b64}`, note: "" };
 }
 
 export default async function handler(req, res) {
@@ -138,7 +254,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { personImage, personImages, mode = "face", aspectRatio = "3:4", imageSize = "4K" } = req.body || {};
+    const {
+      personImage,
+      personImages,
+      mode = "face",
+      engine = "gemini",
+      aspectRatio = "3:4",
+      imageSize = "4K",
+      quality
+    } = req.body || {};
 
     const personList = Array.isArray(personImages) && personImages.length > 0
       ? personImages
@@ -150,78 +274,27 @@ export default async function handler(req, res) {
     if (personList.length > 6) {
       return res.status(400).json({ error: "max 6 person reference images." });
     }
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: "GEMINI_API_KEY is not set in environment." });
-    }
 
     const persons = personList.map(parseDataUrl);
-    const prompt = mode === "full" ? PROMPTS.full : PROMPTS.face;
-
     const primaryBuffer = Buffer.from(persons[0].data, "base64");
-    let faceCropBase64 = null;
+    let faceCropBuffer = null;
     try {
-      faceCropBase64 = await makeFaceCrop(primaryBuffer);
+      faceCropBuffer = await makeFaceCropBuffer(primaryBuffer);
     } catch (e) {
       console.warn("face crop failed:", e?.message);
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-    const userParts = [{ text: prompt }];
-
-    persons.forEach((p, i) => {
-      const label = i === 0
-        ? `Person reference 1 of ${persons.length} — PRIMARY anchor. Identity, EXPRESSION${mode === "full" ? ", body, outfit and pose" : ""} must appear 1:1 in the output. The expression visible here (smile / neutral / half-smile / etc.) is the expression of the output:`
-        : `Person reference ${i + 1} of ${persons.length} — additional view of the SAME person. Use ONLY to triangulate identity (face features); do NOT use this image's expression${mode === "full" ? ", outfit or pose" : ""}:`;
-      userParts.push({ text: label });
-      userParts.push({ inlineData: { mimeType: p.mime, data: p.data } });
-    });
-
-    if (faceCropBase64) {
-      userParts.push({ text: "Face close-up — high-resolution detail crop from the PRIMARY reference (pixel-level identity AND expression reference, must match 1:1):" });
-      userParts.push({ inlineData: { mimeType: "image/jpeg", data: faceCropBase64 } });
-    }
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
-      contents: [
-        {
-          role: "user",
-          parts: userParts
-        }
-      ],
-      config: {
-        responseModalities: ["IMAGE"],
-        imageConfig: {
-          aspectRatio,
-          imageSize
-        }
-      }
-    });
-
-    const parts = response?.candidates?.[0]?.content?.parts || [];
-    let outBase64 = null;
-    let outMime = "image/png";
-    let textNote = "";
-    for (const part of parts) {
-      if (part.inlineData?.data) {
-        outBase64 = part.inlineData.data;
-        outMime = part.inlineData.mimeType || outMime;
-        break;
-      }
-      if (part.text) textNote += part.text + "\n";
-    }
-
-    if (!outBase64) {
-      return res.status(502).json({
-        error: "Model did not return an image.",
-        note: textNote.trim() || undefined
-      });
+    let out;
+    if (engine === "openai") {
+      out = await callOpenAI({ persons, mode, faceCropBuffer, quality });
+    } else {
+      out = await callGemini({ persons, mode, faceCropBuffer, aspectRatio, imageSize });
     }
 
     return res.status(200).json({
-      image: `data:${outMime};base64,${outBase64}`,
-      note: textNote.trim() || undefined
+      image: out.imageDataUrl,
+      engine,
+      note: out.note || undefined
     });
   } catch (err) {
     console.error("generate error:", err);

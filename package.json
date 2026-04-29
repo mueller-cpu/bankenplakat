@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
+    "openai": "^4.104.0",
     "sharp": "^0.34.5"
   }
 }
