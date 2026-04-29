@@ -1,6 +1,6 @@
 // Vercel Serverless Function – komponiert die hochgeladene Person ins
 // Bankenplakat-Motiv. Engine wählbar: "gemini" (Nano Banana Pro) oder
-// "openai" (gpt-image-1).
+// "openai" (gpt-image-2).
 
 import { GoogleGenAI } from "@google/genai";
 import OpenAI, { toFile } from "openai";
@@ -118,7 +118,7 @@ OUTPUT
 - Portrait orientation 3:4, suitable for a printed poster with headline overlay in the upper third.`
 };
 
-// gpt-image-1 folgt langen "DO NOT"-Listen schlechter als Gemini und reagiert
+// gpt-image-2 folgt langen "DO NOT"-Listen schlechter als Gemini und reagiert
 // stark auf knappe, positiv formulierte Anweisungen mit klarer Reihenfolge.
 const OPENAI_PROMPTS = {
   face: `Create a photorealistic 3:4 portrait of the person shown in the reference images, for a printed bank campaign poster.
@@ -233,10 +233,10 @@ async function callOpenAI({ persons, mode, faceCropBuffer, quality }) {
   }
 
   const result = await openai.images.edit({
-    model: "gpt-image-1",
+    model: "gpt-image-2",
     image: files,
     prompt,
-    size: "1024x1536",
+    size: "1152x1536",
     quality: quality || "high",
     n: 1
   });

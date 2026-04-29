@@ -232,8 +232,8 @@
         <span>Nano Banana Pro · 4K · 3:4. Triangulation über mehrere Person-Refs, sehr identity-stark.</span>
       </div>
       <div class="mode-card" data-engine="openai">
-        <strong>OpenAI gpt-image-1</strong>
-        <span>1024×1536 · 3:4 · quality high. Andere Mimik-Charakteristik — Test-Engine.</span>
+        <strong>OpenAI gpt-image-2</strong>
+        <span>1152×1536 · exakt 3:4 · quality high. Multi-Reference-Compositing, andere Mimik-Charakteristik.</span>
       </div>
     </div>
     <button class="btn big" id="generateBtn" disabled>Plakat generieren</button>
@@ -550,7 +550,7 @@
   async function generate() {
     if (state.persons.length === 0) return;
     $("#generateBtn").disabled = true;
-    const engineLabel = state.engine === "openai" ? "OpenAI gpt-image-1" : "Nano Banana Pro";
+    const engineLabel = state.engine === "openai" ? "OpenAI gpt-image-2" : "Nano Banana Pro";
     setStatus(`<div class="spinner-wrap"><div class="spinner"></div>Generiere Plakat mit ${engineLabel}… das kann 15–60 Sekunden dauern.</div>`);
     try {
       const t0 = performance.now();
@@ -580,7 +580,7 @@
       $("#resultImage").src = j.image;
       $("#downloadBtn").href = j.image;
       $("#resultCard").hidden = false;
-      setStatus(`Fertig in ${dur} s · ${j.engine === "openai" ? "gpt-image-1" : "Nano Banana Pro"}.${j.note ? " · Modell-Hinweis: " + j.note : ""}`, "warn");
+      setStatus(`Fertig in ${dur} s · ${j.engine === "openai" ? "gpt-image-2" : "Nano Banana Pro"}.${j.note ? " · Modell-Hinweis: " + j.note : ""}`, "warn");
       $("#resultCard").scrollIntoView({ behavior: "smooth" });
     } catch (e) {
       setStatus(`Fehler: ${e.message}`, "bad");
