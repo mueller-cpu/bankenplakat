@@ -167,8 +167,8 @@
 
   <!-- Step 1: Motiv -->
   <section class="card">
-    <h2><span class="step-num">1</span>Motiv wählen</h2>
-    <p class="help">Wähle ein vorhandenes Plakatmotiv oder lade ein eigenes Vorbild hoch (Hochformat empfohlen).</p>
+    <h2><span class="step-num">1</span>Pose-Schablone wählen</h2>
+    <p class="help">Dient nur als halbtransparente Hilfe beim Webcam-Posieren — die KI erzeugt die Szene (Schafe, Hügel, Himmel) eigenständig anhand einer Text-Spezifikation und übernimmt nichts mehr aus diesem Motiv.</p>
     <div class="motif-grid" id="motifGrid"></div>
     <input type="file" id="motifUpload" accept="image/*" hidden />
   </section>
@@ -235,7 +235,7 @@
     <h2><span class="step-num">5</span>Ergebnis</h2>
     <div class="result-wrap">
       <div class="col">
-        <h3>Original</h3>
+        <h3>Pose-Schablone</h3>
         <img id="resultOriginal" />
       </div>
       <div class="col">
@@ -316,7 +316,7 @@
   }
 
   function checkReady() {
-    $("#generateBtn").disabled = !(state.motif && state.persons.length > 0);
+    $("#generateBtn").disabled = state.persons.length === 0;
   }
 
   function renderPersonGrid() {
@@ -528,16 +528,15 @@
   $("#regenerateBtn")?.addEventListener("click", generate);
 
   async function generate() {
-    if (!state.motif || state.persons.length === 0) return;
+    if (state.persons.length === 0) return;
     $("#generateBtn").disabled = true;
     setStatus(`<div class="spinner-wrap"><div class="spinner"></div>Generiere Plakat mit Nano Banana Pro… das kann 15–60 Sekunden dauern.</div>`);
     try {
       const t0 = performance.now();
       // Mehrere Bilder → Pro-Bild kleiner skalieren, damit Body unter Vercels 4,5 MB bleibt
       const perImageMax = state.persons.length >= 4 ? 1100
-        : state.persons.length >= 2 ? 1300
+        : state.persons.length >= 2 ? 1400
         : 1600;
-      const refSmall = await resizeDataUrl(state.motif.dataUrl, 1600, 0.92);
       const personsSmall = [];
       for (const p of state.persons) {
         personsSmall.push(await resizeDataUrl(p, perImageMax, 0.9));
@@ -546,7 +545,6 @@
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          referenceImage: refSmall,
           personImages: personsSmall,
           mode: state.mode,
           aspectRatio: "3:4",
