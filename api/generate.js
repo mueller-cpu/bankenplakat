@@ -26,17 +26,19 @@ const PROMPTS = {
   face: `You are producing a high-end commercial portrait for a printed bank campaign poster.
 
 PRIORITY HIERARCHY (non-negotiable, in this order)
-1. IDENTITY and EXPRESSION of the person — must be a 1:1 photographic likeness, triangulated from ALL person reference images. Including the person's actual expression.
-2. Natural, seamless photographic integration — single coherent real photograph.
-3. Scene specification below.
-4. Compositional rules for the headline area.
+1. IDENTITY of the person — 1:1 photographic likeness, triangulated from ALL person reference images.
+2. EXPRESSION of the person — must reproduce the expression of the PRIMARY (first) person reference image exactly.
+3. Natural, seamless photographic integration — single coherent real photograph.
+4. Scene specification below.
+5. Compositional rules for the headline area.
 
 INPUT
-- The first N images (labelled "person reference") all show the SAME real person from different angles / lighting / expressions. Use ALL of them to triangulate identity and to determine the natural expression of this person. NO scene reference image is provided — the scene is fully specified by the text below.
-- One additional image is a high-resolution close-up detail of the person's face. Use it to verify identity at the pixel level.
+- The first N images (labelled "person reference") all show the SAME real person from different angles / lighting / expressions. Use ALL of them to triangulate IDENTITY. The PRIMARY (first) reference is also the EXPRESSION anchor — its mouth, eyes and brows define the output's expression. The other references are for identity confirmation only and must NOT be averaged into the expression.
+- One additional image is a high-resolution close-up detail of the person's face (cropped from the PRIMARY reference). Use it to verify identity and expression at the pixel level.
+- NO scene reference image is provided — the scene is fully specified by the text below.
 
 METHOD
-Compose a NEW photograph from scratch. The person's identity AND their expression (as shown across the person reference images) is the only fixed point — do NOT redraw, idealize, smooth, beautify or generalize. Render the wardrobe, pose, light and scene fresh according to the scene specification, integrating seamlessly with the face. Skin tone, light direction and shadows must match consistently between face, neck, hands and surroundings.
+Compose a NEW photograph from scratch. Two fixed points: (a) the person's identity (face + features as triangulated across ALL person references), and (b) the person's expression as shown in the PRIMARY reference. Render the wardrobe, pose, light and scene fresh according to the scene specification, integrating seamlessly with the face. Skin tone, light direction and shadows must match consistently between face, neck, hands and surroundings.
 
 IDENTITY MUST PRESERVE (1:1 — verified across ALL person reference images)
 - Bone structure, face shape, jawline, chin, cheekbones.
@@ -48,8 +50,10 @@ IDENTITY MUST PRESERVE (1:1 — verified across ALL person reference images)
 - Glasses (exact same model) if present.
 - Apparent age, weight, head and neck build.
 
-EXPRESSION (CRITICAL)
-- Take the expression directly from the person reference images. If the person is neutral / serious / closed-mouth in the references, render them neutral / serious / closed-mouth. If they are smiling, render them smiling. NEVER invent an expression that is not present in the references — especially do not add a smile if none is shown.
+EXPRESSION (from PRIMARY reference, 1:1)
+- The output's expression MUST match the PRIMARY (first) person reference. If the primary shows a smile, render the same smile (same intensity, same teeth visibility, same eye crinkle). If it shows a closed-mouth neutral or serious face, render that. If it shows a soft half-smile, render a soft half-smile.
+- Reproduce the PRIMARY's mouth shape and openness, eye openness and gaze direction, eyebrow position and any visible micro-expression as faithfully as you reproduce the bone structure.
+- Do NOT average expressions across the multiple references — only the PRIMARY defines the expression.
 
 WARDROBE
 - Business attire suitable for a bank campaign (dark blazer, suit or shirt). Render fresh; no specific outfit reference.
@@ -57,7 +61,7 @@ WARDROBE
 ${SCENE_SPEC}
 
 DO NOT
-- Do NOT add or remove a smile or any expression that is not in the person reference images.
+- Do NOT replace the PRIMARY's expression with a default neutral or default smile — match it exactly.
 - Do NOT make the person look younger, slimmer, more symmetric or more attractive.
 - Do NOT generalize features toward an average face.
 - Do NOT change eye color, hair color or skin tone.
@@ -72,31 +76,34 @@ OUTPUT
   full: `You are producing a high-end commercial portrait for a printed bank campaign poster.
 
 PRIORITY HIERARCHY (non-negotiable, in this order)
-1. IDENTITY, BODY, OUTFIT and EXPRESSION of the person — face, body, outfit and expression must be 1:1 from the person reference images.
-2. Natural, seamless photographic integration — single coherent real photograph.
-3. Scene specification below.
-4. Compositional rules for the headline area.
+1. IDENTITY of the person — 1:1 likeness, triangulated from ALL person reference images.
+2. BODY, OUTFIT, POSE and EXPRESSION — must match the PRIMARY (first) person reference 1:1.
+3. Natural, seamless photographic integration — single coherent real photograph.
+4. Scene specification below.
+5. Compositional rules for the headline area.
 
 INPUT
-- The first N images (labelled "person reference") all show the SAME real person — face, expression, body, outfit. Use ALL of them to triangulate identity and to determine the natural expression. The PRIMARY (first) reference is the anchor for outfit, body and pose; additional references confirm identity. NO scene reference image is provided.
-- One additional image is a high-resolution close-up detail of the person's face for pixel-level identity verification.
+- The first N images (labelled "person reference") all show the SAME real person — face, expression, body, outfit. Use ALL of them to triangulate IDENTITY. The PRIMARY (first) reference is the anchor for outfit, body, pose AND expression. Additional references are for identity confirmation only and must NOT be averaged into expression, pose or outfit.
+- One additional image is a high-resolution close-up detail of the person's face (cropped from the PRIMARY reference) for pixel-level identity and expression verification.
+- NO scene reference image is provided — the scene is fully specified by the text below.
 
 METHOD
-Compose a NEW photograph from scratch. The person from the references — face, expression, body, outfit, proportions — is the only fixed point. Render the surrounding scene fresh according to the scene specification. Integrate the person seamlessly: consistent ground contact, light direction, shadows, skin tone and outfit lighting matching the surroundings.
+Compose a NEW photograph from scratch. The person from the references — face, expression, body, outfit, proportions — is the only fixed point, with the PRIMARY reference defining body, outfit, pose and expression. Render the surrounding scene fresh according to the scene specification. Integrate the person seamlessly: consistent ground contact, light direction, shadows, skin tone and outfit lighting matching the surroundings.
 
 IDENTITY MUST PRESERVE (1:1 — verified across ALL person reference images)
 - Full face: bone structure, eyes, nose, mouth, hairline, hair, skin tone, skin texture, freckles, moles, scars, wrinkles, glasses, apparent age.
 - Full body: height, build, weight, body proportions, shoulder width, posture.
-- Full outfit: every visible garment, color, pattern, fit, accessories, shoes, jewelry, watch — exactly as in the primary reference.
+- Full outfit: every visible garment, color, pattern, fit, accessories, shoes, jewelry, watch — exactly as in the PRIMARY reference.
 
-EXPRESSION (CRITICAL)
-- Take the expression directly from the person reference images. Neutral stays neutral, smiling stays smiling. NEVER invent a smile or any other expression that is not in the references.
+EXPRESSION (from PRIMARY reference, 1:1)
+- The output's expression MUST match the PRIMARY (first) reference exactly. Smile → same smile. Neutral → neutral. Half-smile → half-smile. Reproduce mouth shape and openness, eye openness, gaze direction, eyebrow position and micro-expressions as faithfully as the bone structure.
+- Do NOT average expressions across the references — only the PRIMARY defines the expression.
 
 ${SCENE_SPEC}
 
 DO NOT
-- Do NOT add or remove a smile or any expression not present in the references.
-- Do NOT replace the outfit with business attire unless the primary reference already shows it.
+- Do NOT replace the PRIMARY's expression with a default neutral or default smile — match it exactly.
+- Do NOT replace the outfit with business attire unless the PRIMARY reference already shows it.
 - Do NOT slim, idealize, beautify or change the body or face.
 - Do NOT change hair, skin tone, eye color or features.
 - Do NOT invent props, accessories, gestures or wardrobe details not in the references.
@@ -164,14 +171,14 @@ export default async function handler(req, res) {
 
     persons.forEach((p, i) => {
       const label = i === 0
-        ? `Person reference 1 of ${persons.length} — PRIMARY identity anchor (real person whose likeness AND expression must appear 1:1 in the output${mode === "full" ? "; this is also the source for body and outfit" : ""}):`
-        : `Person reference ${i + 1} of ${persons.length} — additional view of the SAME person (use to triangulate identity and expression 1:1):`;
+        ? `Person reference 1 of ${persons.length} — PRIMARY anchor. Identity, EXPRESSION${mode === "full" ? ", body, outfit and pose" : ""} must appear 1:1 in the output. The expression visible here (smile / neutral / half-smile / etc.) is the expression of the output:`
+        : `Person reference ${i + 1} of ${persons.length} — additional view of the SAME person. Use ONLY to triangulate identity (face features); do NOT use this image's expression${mode === "full" ? ", outfit or pose" : ""}:`;
       userParts.push({ text: label });
       userParts.push({ inlineData: { mimeType: p.mime, data: p.data } });
     });
 
     if (faceCropBase64) {
-      userParts.push({ text: "Face close-up — high-resolution detail crop of the SAME person's face (pixel-level identity reference, must match 1:1):" });
+      userParts.push({ text: "Face close-up — high-resolution detail crop from the PRIMARY reference (pixel-level identity AND expression reference, must match 1:1):" });
       userParts.push({ inlineData: { mimeType: "image/jpeg", data: faceCropBase64 } });
     }
 
