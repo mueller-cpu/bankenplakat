@@ -1,9 +1,7 @@
 // Vercel Serverless Function – komponiert die hochgeladene Person ins
-// Bankenplakat-Motiv. Engine wählbar: "gemini" (Nano Banana Pro) oder
-// "openai" (gpt-image-1.5).
+// Bankenplakat-Motiv. Backend-Modell ist nicht teil der externen UI.
 
 import { GoogleGenAI } from "@google/genai";
-import OpenAI, { toFile } from "openai";
 import sharp from "sharp";
 
 export const config = {
@@ -118,48 +116,6 @@ OUTPUT
 - Portrait orientation 3:4, suitable for a printed poster with headline overlay in the upper third.`
 };
 
-// gpt-image-1.5 folgt langen "DO NOT"-Listen schlechter als Gemini und reagiert
-// stark auf knappe, positiv formulierte Anweisungen mit klarer Reihenfolge.
-// Composition mit harten Prozenten muss vor allem anderen stehen, sonst zentriert
-// das Modell die Person und der Headline-Headroom oben fehlt.
-const OPENAI_PROMPTS = {
-  face: `IDENTITY (absolute top priority)
-The person in the output MUST be the exact same real person shown in the attached reference photos. Same face, same bone structure, same eyes, nose, mouth, hairline, hair, skin tone, freckles, moles, scars, glasses, apparent age and weight. The output is a recognizable photo of THIS specific person — not a similar-looking person, not a stylized version, not an idealized version.
-- Image 1 is the PRIMARY: identity AND expression come from here. Reproduce the expression (smile, neutral, half-smile) exactly as in image 1.
-- Images 2..N are additional angles of the SAME person — use only to confirm features.
-- Last image is a tight face-crop from image 1 for pixel-level identity verification.
-If the person in the output does not look like the reference photos, the result is unusable.
-
-SCENE
-Place this exact person outdoors in a pastoral setting: gentle green rolling hills, a small flock of sheep around and behind them, soft overcast daylight, analog/film look. Wardrobe: business-appropriate attire matching the person's apparent gender and style as shown in the references — do NOT default to a man's suit if the references show a woman or someone in different clothing. Photorealistic, no AI-glossy skin.
-
-COMPOSITION (1024×1536 portrait poster — headline area on top)
-- Top 40% of the frame: empty calm sky. No head, no hair, no sheep, no hilltops, no busy clouds. This area is for poster text.
-- Subject's head top sits at the 40% line. Eyes around 55% from top. Horizon below the eyes.
-- Bottom 60%: subject framed head-and-shoulders to chest, sheep and hills around them.
-- Medium shot — the head fills roughly 20–25% of the frame height. Enough resolution to clearly recognize the person's face.
-
-REMINDER: The person in the output must be the SAME person as in the reference photos — same face, same gender, same age, same hair, same skin tone. If you are uncertain about any feature, look at the reference photos again. Do NOT generate a generic person.`,
-
-  full: `IDENTITY (absolute top priority)
-The person in the output MUST be the exact same real person shown in the attached reference photos — same face, body, outfit and expression. Reproduce face, hair, skin, glasses, body proportions, height, build. The output is a recognizable photo of THIS specific person.
-- Image 1 is the PRIMARY: identity, expression, body, outfit and pose all come from here. Reproduce outfit (every garment, color, pattern, fit, accessories, watch, shoes) exactly.
-- Images 2..N are additional angles of the SAME person — use only to confirm features.
-- Last image is a tight face-crop from image 1 for pixel-level identity verification.
-If the person in the output does not look like the reference photos, the result is unusable.
-
-SCENE
-Place this exact person outdoors in a pastoral setting: gentle green rolling hills, a small flock of sheep around and behind them, soft overcast daylight, analog/film look. The person wears the exact outfit from the PRIMARY reference image — do NOT change the outfit. Photorealistic, no AI-glossy skin.
-
-COMPOSITION (1024×1536 portrait poster — headline area on top)
-- Top 40% of the frame: empty calm sky. No head, no sheep, no hilltops. This area is for poster text.
-- Subject's head top sits at the 40% line. Eyes around 55% from top.
-- Bottom 60%: subject head-and-shoulders to chest, sheep and hills around them.
-- Medium shot — the head fills roughly 20–25% of the frame height. Enough resolution to clearly recognize the person.
-
-REMINDER: The person in the output must be the SAME person as in the reference photos — same face, same gender, same age, same hair, same skin tone, same outfit. Do NOT generate a generic person.`
-};
-
 async function makeFaceCropBuffer(buffer) {
   const meta = await sharp(buffer).metadata();
   const w = meta.width;
@@ -175,100 +131,6 @@ async function makeFaceCropBuffer(buffer) {
     .toBuffer();
 }
 
-async function callGemini({ persons, mode, faceCropBuffer, aspectRatio, imageSize }) {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not set in environment.");
-  }
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  const prompt = mode === "full" ? PROMPTS.full : PROMPTS.face;
-
-  const userParts = [{ text: prompt }];
-  persons.forEach((p, i) => {
-    const label = i === 0
-      ? `Person reference 1 of ${persons.length} — PRIMARY anchor. Identity, EXPRESSION${mode === "full" ? ", body, outfit and pose" : ""} must appear 1:1 in the output. The expression visible here (smile / neutral / half-smile / etc.) is the expression of the output:`
-      : `Person reference ${i + 1} of ${persons.length} — additional view of the SAME person. Use ONLY to triangulate identity (face features); do NOT use this image's expression${mode === "full" ? ", outfit or pose" : ""}:`;
-    userParts.push({ text: label });
-    userParts.push({ inlineData: { mimeType: p.mime, data: p.data } });
-  });
-  if (faceCropBuffer) {
-    userParts.push({ text: "Face close-up — high-resolution detail crop from the PRIMARY reference (pixel-level identity AND expression reference, must match 1:1):" });
-    userParts.push({ inlineData: { mimeType: "image/jpeg", data: faceCropBuffer.toString("base64") } });
-  }
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3-pro-image-preview",
-    contents: [{ role: "user", parts: userParts }],
-    config: {
-      responseModalities: ["IMAGE"],
-      imageConfig: { aspectRatio, imageSize }
-    }
-  });
-
-  const parts = response?.candidates?.[0]?.content?.parts || [];
-  let outBase64 = null;
-  let outMime = "image/png";
-  let textNote = "";
-  for (const part of parts) {
-    if (part.inlineData?.data) {
-      outBase64 = part.inlineData.data;
-      outMime = part.inlineData.mimeType || outMime;
-      break;
-    }
-    if (part.text) textNote += part.text + "\n";
-  }
-  if (!outBase64) {
-    const err = new Error(textNote.trim() || "Model did not return an image.");
-    err.note = textNote.trim();
-    throw err;
-  }
-  return { imageDataUrl: `data:${outMime};base64,${outBase64}`, note: textNote.trim() };
-}
-
-async function callOpenAI({ persons, mode, faceCropBuffer, quality }) {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not set in environment.");
-  }
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const prompt = mode === "full" ? OPENAI_PROMPTS.full : OPENAI_PROMPTS.face;
-
-  const files = [];
-  for (let i = 0; i < persons.length; i++) {
-    const p = persons[i];
-    const buf = Buffer.from(p.data, "base64");
-    const ext = (p.mime.split("/")[1] || "png").replace("jpeg", "jpg");
-    files.push(await toFile(buf, `person-${i + 1}.${ext}`, { type: p.mime }));
-  }
-  if (faceCropBuffer) {
-    files.push(await toFile(faceCropBuffer, "face-crop.jpg", { type: "image/jpeg" }));
-  }
-
-  let result;
-  try {
-    result = await openai.images.edit({
-      model: "gpt-image-1.5",
-      image: files,
-      prompt,
-      size: "1024x1536",
-      quality: quality || "high",
-      input_fidelity: "high",
-      n: 1
-    });
-  } catch (err) {
-    const status = err?.status || err?.response?.status;
-    const code = err?.code || err?.error?.code;
-    const detail = err?.error?.message || err?.message || String(err);
-    const msg = `OpenAI ${status || ""} ${code || ""}: ${detail}`.trim();
-    console.error("openai images.edit failed:", { status, code, detail, raw: err });
-    throw new Error(msg);
-  }
-
-  const b64 = result?.data?.[0]?.b64_json;
-  if (!b64) {
-    throw new Error("OpenAI did not return an image.");
-  }
-  return { imageDataUrl: `data:image/png;base64,${b64}`, note: "" };
-}
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -279,10 +141,8 @@ export default async function handler(req, res) {
       personImage,
       personImages,
       mode = "face",
-      engine = "gemini",
       aspectRatio = "3:4",
-      imageSize = "4K",
-      quality
+      imageSize = "4K"
     } = req.body || {};
 
     const personList = Array.isArray(personImages) && personImages.length > 0
@@ -295,6 +155,9 @@ export default async function handler(req, res) {
     if (personList.length > 6) {
       return res.status(400).json({ error: "max 6 person reference images." });
     }
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "GEMINI_API_KEY is not set in environment." });
+    }
 
     const persons = personList.map(parseDataUrl);
     const primaryBuffer = Buffer.from(persons[0].data, "base64");
@@ -305,17 +168,53 @@ export default async function handler(req, res) {
       console.warn("face crop failed:", e?.message);
     }
 
-    let out;
-    if (engine === "openai") {
-      out = await callOpenAI({ persons, mode, faceCropBuffer, quality });
-    } else {
-      out = await callGemini({ persons, mode, faceCropBuffer, aspectRatio, imageSize });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const prompt = mode === "full" ? PROMPTS.full : PROMPTS.face;
+
+    const userParts = [{ text: prompt }];
+    persons.forEach((p, i) => {
+      const label = i === 0
+        ? `Person reference 1 of ${persons.length} — PRIMARY anchor. Identity, EXPRESSION${mode === "full" ? ", body, outfit and pose" : ""} must appear 1:1 in the output. The expression visible here (smile / neutral / half-smile / etc.) is the expression of the output:`
+        : `Person reference ${i + 1} of ${persons.length} — additional view of the SAME person. Use ONLY to triangulate identity (face features); do NOT use this image's expression${mode === "full" ? ", outfit or pose" : ""}:`;
+      userParts.push({ text: label });
+      userParts.push({ inlineData: { mimeType: p.mime, data: p.data } });
+    });
+    if (faceCropBuffer) {
+      userParts.push({ text: "Face close-up — high-resolution detail crop from the PRIMARY reference (pixel-level identity AND expression reference, must match 1:1):" });
+      userParts.push({ inlineData: { mimeType: "image/jpeg", data: faceCropBuffer.toString("base64") } });
+    }
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-image-preview",
+      contents: [{ role: "user", parts: userParts }],
+      config: {
+        responseModalities: ["IMAGE"],
+        imageConfig: { aspectRatio, imageSize }
+      }
+    });
+
+    const parts = response?.candidates?.[0]?.content?.parts || [];
+    let outBase64 = null;
+    let outMime = "image/png";
+    let textNote = "";
+    for (const part of parts) {
+      if (part.inlineData?.data) {
+        outBase64 = part.inlineData.data;
+        outMime = part.inlineData.mimeType || outMime;
+        break;
+      }
+      if (part.text) textNote += part.text + "\n";
+    }
+    if (!outBase64) {
+      return res.status(502).json({
+        error: "Model did not return an image.",
+        note: textNote.trim() || undefined
+      });
     }
 
     return res.status(200).json({
-      image: out.imageDataUrl,
-      engine,
-      note: out.note || undefined
+      image: `data:${outMime};base64,${outBase64}`,
+      note: textNote.trim() || undefined
     });
   } catch (err) {
     console.error("generate error:", err);

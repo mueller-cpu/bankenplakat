@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Bankenplakate – Person-Swap</title>
+<title>Bankenplakate</title>
 <style>
   :root {
     --bg: #0e1116;
@@ -23,10 +23,8 @@
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif; }
   header {
     padding: 24px 32px; border-bottom: 1px solid var(--line);
-    display: flex; align-items: center; justify-content: space-between;
   }
   header h1 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
-  header .sub { color: var(--muted); font-size: 13px; }
   main { max-width: 1100px; margin: 0 auto; padding: 28px; display: grid; gap: 24px; }
   section.card {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px;
@@ -34,48 +32,29 @@
   section.card h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); }
   section.card p.help { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
 
-  /* Motif grid */
-  .motif-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-  .motif-tile {
+  /* Motif preview */
+  .motif-preview {
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
-    cursor: pointer; position: relative; aspect-ratio: 3/4; transition: transform .12s ease, border-color .12s ease;
+    aspect-ratio: 3/4; max-width: 280px; position: relative;
   }
-  .motif-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .motif-tile.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,140,255,0.25); }
-  .motif-tile:hover { transform: translateY(-2px); }
-  .motif-tile .badge {
-    position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); color: #fff;
-    padding: 4px 8px; border-radius: 999px; font-size: 11px; opacity: 0; transition: opacity .12s;
-  }
-  .motif-tile.selected .badge { opacity: 1; background: var(--accent); }
+  .motif-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .motif-upload {
     background: var(--panel-2); border: 1px dashed var(--line); border-radius: 10px;
-    aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; color: var(--muted);
-    cursor: pointer; text-align: center; font-size: 13px; padding: 12px;
+    aspect-ratio: 3/4; max-width: 280px; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); cursor: pointer; text-align: center; font-size: 13px; padding: 16px;
   }
   .motif-upload:hover { border-color: var(--accent); color: var(--text); }
-
-  /* Tabs */
-  .tabs { display: flex; gap: 4px; margin-bottom: 14px; }
-  .tab {
-    background: transparent; border: 1px solid var(--line); color: var(--muted);
-    padding: 8px 14px; border-radius: 999px; font-size: 13px; cursor: pointer;
+  .motif-replace {
+    margin-top: 10px; color: var(--muted); font-size: 12px; cursor: pointer;
+    text-decoration: underline;
   }
-  .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-  /* Webcam */
-  .cam-wrap { position: relative; width: 100%; max-width: 560px; aspect-ratio: 3/4; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
-  .cam-wrap video, .cam-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .cam-wrap video { object-fit: cover; transform: scaleX(-1); }
-  .cam-wrap .overlay { pointer-events: none; opacity: 0.35; mix-blend-mode: screen; }
-  .cam-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .opacity-row { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
-  .opacity-row input[type=range] { width: 140px; }
+  .motif-replace:hover { color: var(--text); }
 
   /* Buttons */
   .btn {
     background: var(--accent); color: #fff; border: 0; padding: 11px 18px; border-radius: 10px;
     font-size: 14px; font-weight: 500; cursor: pointer; transition: background .12s ease;
+    text-decoration: none; display: inline-block;
   }
   .btn:hover { background: var(--accent-2); }
   .btn:disabled { background: #2a313c; color: var(--muted); cursor: not-allowed; }
@@ -83,13 +62,12 @@
   .btn.secondary:hover { background: var(--panel-2); }
   .btn.big { padding: 14px 22px; font-size: 15px; }
 
-  /* Upload */
+  /* Upload zone */
   .upload-zone {
     border: 1px dashed var(--line); border-radius: 10px; padding: 28px; text-align: center;
-    color: var(--muted); cursor: pointer; max-width: 560px;
+    color: var(--muted); cursor: pointer; max-width: 580px;
   }
   .upload-zone:hover { border-color: var(--accent); color: var(--text); }
-  .preview { max-width: 280px; border-radius: 10px; border: 1px solid var(--line); margin-top: 12px; display: block; }
 
   /* Multi-person previews */
   .person-grid {
@@ -131,10 +109,8 @@
   .mode-card span { color: var(--muted); font-size: 13px; }
 
   /* Result */
-  .result-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-  .result-wrap img { width: 100%; border-radius: 10px; border: 1px solid var(--line); }
-  .result-wrap .col h3 { font-size: 13px; color: var(--muted); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.04em; }
-  @media (max-width: 720px) { .result-wrap { grid-template-columns: 1fr; } }
+  .result-image { width: 100%; max-width: 520px; border-radius: 10px; border: 1px solid var(--line); display: block; }
+  .result-actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
 
   /* Spinner */
   .spinner-wrap { display: flex; align-items: center; gap: 12px; color: var(--muted); }
@@ -157,51 +133,29 @@
 <body>
 
 <header>
-  <div>
-    <h1>Bankenplakate · Person-Swap</h1>
-    <div class="sub">Nano Banana Pro setzt deine Person ins Originalmotiv</div>
-  </div>
+  <h1>Bankenplakate</h1>
 </header>
 
 <main>
 
   <!-- Step 1: Motiv -->
   <section class="card">
-    <h2><span class="step-num">1</span>Pose-Schablone wählen</h2>
-    <p class="help">Dient nur als halbtransparente Hilfe beim Webcam-Posieren — die KI bekommt das Motiv-Bild nicht zu sehen. Komposition wird per Text-Spec definiert (Schafe, Hügel, Headroom oben).</p>
-    <div class="motif-grid" id="motifGrid"></div>
+    <h2><span class="step-num">1</span>Pose-Schablone hochladen</h2>
+    <p class="help">Eigenes Plakat-Motiv hochladen. Dient nur als visuelle Orientierung — wird nicht weiterverarbeitet.</p>
+    <div id="motifContainer">
+      <div class="motif-upload" id="motifUploadTile">+ Motiv auswählen</div>
+    </div>
     <input type="file" id="motifUpload" accept="image/*" hidden />
   </section>
 
   <!-- Step 2: Person -->
   <section class="card">
-    <h2><span class="step-num">2</span>Person erfassen</h2>
-    <p class="help">Lade <strong>1–5 Fotos derselben Person</strong> aus verschiedenen Winkeln (frontal, ¾ links, ¾ rechts, Close-up Gesicht). Das erste Bild ist das Hauptfoto und bestimmt im "Komplette Person"-Modus auch Outfit und Pose. Mehr Winkel = stabilere Identität im Ergebnis.</p>
-    <div class="tabs">
-      <button class="tab active" data-tab="cam">Webcam</button>
-      <button class="tab" data-tab="upload">Foto hochladen</button>
+    <h2><span class="step-num">2</span>Personenfotos hochladen</h2>
+    <p class="help">Lade <strong>1–5 Fotos derselben Person</strong> aus verschiedenen Winkeln (frontal, ¾ links, ¾ rechts, Close-up Gesicht). Das erste Foto ist das Hauptfoto und bestimmt im "Komplette Person"-Modus auch Outfit und Pose. Mehr Winkel = stabilere Identität im Ergebnis. Auf dem Handy bietet der Foto-Dialog auch "Foto aufnehmen" an.</p>
+    <div class="upload-zone" id="uploadZone">
+      Fotos hierher ziehen oder klicken zum Auswählen / Aufnehmen
+      <input type="file" id="personUpload" accept="image/*" multiple hidden />
     </div>
-
-    <div id="tab-cam">
-      <div class="cam-wrap">
-        <video id="cam" playsinline autoplay muted></video>
-        <canvas id="overlay" class="overlay"></canvas>
-      </div>
-      <div class="cam-controls">
-        <button class="btn" id="startCam">Kamera starten</button>
-        <button class="btn secondary" id="capture" disabled>Aufnehmen + hinzufügen</button>
-        <label class="opacity-row">Schablonen-Deckkraft <input type="range" id="overlayOpacity" min="0" max="100" value="35" /></label>
-      </div>
-      <canvas id="snapshot" hidden></canvas>
-    </div>
-
-    <div id="tab-upload" hidden>
-      <div class="upload-zone" id="uploadZone">
-        Fotos hierher ziehen oder klicken zum Auswählen (mehrere möglich)
-        <input type="file" id="personUpload" accept="image/*" multiple hidden />
-      </div>
-    </div>
-
     <div class="person-grid" id="personGrid"></div>
     <div class="person-count" id="personCount"></div>
   </section>
@@ -209,15 +163,15 @@
   <!-- Step 3: Modus -->
   <section class="card">
     <h2><span class="step-num">3</span>Austausch-Modus</h2>
-    <p class="help">Soll nur das Gesicht/die Identität ausgetauscht werden (Anzug, Pose und Hintergrund bleiben original) oder die komplette Person?</p>
+    <p class="help">Soll nur das Gesicht / die Identität ausgetauscht werden, oder die komplette Person?</p>
     <div class="mode-row">
       <div class="mode-card selected" data-mode="face">
         <strong>Nur Gesicht / Identität</strong>
-        <span>Originaloutfit, Pose und Komposition bleiben erhalten. Empfohlen für konsistente Plakatreihen.</span>
+        <span>Outfit wird neu gerendert, Pose und Komposition werden frisch komponiert.</span>
       </div>
       <div class="mode-card" data-mode="full">
         <strong>Komplette Person</strong>
-        <span>Ersetzt die Person inkl. Outfit. Sinnvoll, wenn der Nutzer in eigenem Look erscheinen soll.</span>
+        <span>Ersetzt die Person inkl. Outfit aus dem Hauptfoto.</span>
       </div>
     </div>
   </section>
@@ -225,17 +179,7 @@
   <!-- Step 4: Generate -->
   <section class="card">
     <h2><span class="step-num">4</span>Plakat generieren</h2>
-    <p class="help">Engine wählen, dann generieren. Dauert 15–60 s.</p>
-    <div class="mode-row" style="margin-bottom: 14px;">
-      <div class="mode-card selected" data-engine="gemini">
-        <strong>Gemini 3 Pro Image</strong>
-        <span>Nano Banana Pro · 4K · 3:4. Triangulation über mehrere Person-Refs, sehr identity-stark.</span>
-      </div>
-      <div class="mode-card" data-engine="openai">
-        <strong>OpenAI Images 2.0 (gpt-image-1.5)</strong>
-        <span>1024×1536 · 2:3 · quality high. Multi-Reference-Compositing, andere Mimik-Charakteristik.</span>
-      </div>
-    </div>
+    <p class="help">Dauert ca. 15–60 Sekunden.</p>
     <button class="btn big" id="generateBtn" disabled>Plakat generieren</button>
     <div id="status"></div>
   </section>
@@ -243,19 +187,10 @@
   <!-- Step 5: Result -->
   <section class="card" id="resultCard" hidden>
     <h2><span class="step-num">5</span>Ergebnis</h2>
-    <div class="result-wrap">
-      <div class="col">
-        <h3>Pose-Schablone</h3>
-        <img id="resultOriginal" />
-      </div>
-      <div class="col">
-        <h3>Generiert</h3>
-        <img id="resultImage" />
-        <div style="margin-top: 12px; display: flex; gap: 10px;">
-          <a id="downloadBtn" class="btn" download="bankenplakat.png">Bild herunterladen</a>
-          <button class="btn secondary" id="regenerateBtn">Neu generieren</button>
-        </div>
-      </div>
+    <img id="resultImage" class="result-image" alt="Generiertes Plakat" />
+    <div class="result-actions">
+      <a id="downloadBtn" class="btn" download="bankenplakat.png">Bild herunterladen</a>
+      <button class="btn secondary" id="regenerateBtn">Neu generieren</button>
     </div>
   </section>
 
@@ -265,32 +200,14 @@
   // ------------------ State ------------------
   const MAX_PERSONS = 5;
   const state = {
-    motif: null,         // { src, dataUrl }
+    motif: null,         // dataUrl — nur visuelle Vorschau, geht nicht ans Backend
     persons: [],         // dataUrl[] — first one is the primary anchor
     mode: "face",
-    engine: "gemini",
-    overlayOpacity: 0.35,
   };
-
-  const DEFAULT_MOTIFS = [
-    { src: "/motifs/mann_schafe.png", label: "Mann · Schafe" },
-    { src: "/motifs/frau_schafe.png", label: "Frau · Schafe" }
-  ];
 
   // ------------------ Utils ------------------
   const $ = sel => document.querySelector(sel);
   const $$ = sel => Array.from(document.querySelectorAll(sel));
-
-  async function urlToDataUrl(url) {
-    const r = await fetch(url);
-    const blob = await r.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
 
   function fileToDataUrl(file) {
     return new Promise((resolve, reject) => {
@@ -330,6 +247,38 @@
     $("#generateBtn").disabled = state.persons.length === 0;
   }
 
+  // ------------------ Step 1: Motiv ------------------
+  function renderMotif() {
+    const container = $("#motifContainer");
+    container.innerHTML = "";
+    if (state.motif) {
+      const preview = document.createElement("div");
+      preview.className = "motif-preview";
+      preview.innerHTML = `<img src="${state.motif}" alt="Motiv-Vorschau" />`;
+      container.appendChild(preview);
+      const replace = document.createElement("div");
+      replace.className = "motif-replace";
+      replace.textContent = "Anderes Motiv hochladen";
+      replace.addEventListener("click", () => $("#motifUpload").click());
+      container.appendChild(replace);
+    } else {
+      const tile = document.createElement("div");
+      tile.className = "motif-upload";
+      tile.textContent = "+ Motiv auswählen";
+      tile.addEventListener("click", () => $("#motifUpload").click());
+      container.appendChild(tile);
+    }
+  }
+
+  $("#motifUpload").addEventListener("change", async e => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    state.motif = await fileToDataUrl(f);
+    renderMotif();
+    e.target.value = "";
+  });
+
+  // ------------------ Step 2: Personenfotos ------------------
   function renderPersonGrid() {
     const grid = $("#personGrid");
     grid.innerHTML = "";
@@ -354,11 +303,7 @@
       const add = document.createElement("div");
       add.className = "person-add-tile";
       add.textContent = "+ weiteres Foto";
-      add.addEventListener("click", () => {
-        const activeTab = $(".tab.active")?.dataset.tab;
-        if (activeTab === "upload") $("#personUpload").click();
-        else $("#capture").click();
-      });
+      add.addEventListener("click", () => $("#personUpload").click());
       grid.appendChild(add);
     }
     $("#personCount").textContent = state.persons.length === 0
@@ -376,136 +321,6 @@
     checkReady();
   }
 
-  // ------------------ Step 1: Motif grid ------------------
-  function renderMotifs() {
-    const grid = $("#motifGrid");
-    grid.innerHTML = "";
-    DEFAULT_MOTIFS.forEach(m => {
-      const tile = document.createElement("div");
-      tile.className = "motif-tile";
-      tile.innerHTML = `<img src="${m.src}" alt="${m.label}" /><div class="badge">Ausgewählt</div>`;
-      tile.addEventListener("click", () => selectMotif(m.src, tile));
-      grid.appendChild(tile);
-    });
-    const upload = document.createElement("div");
-    upload.className = "motif-upload";
-    upload.textContent = "+ Eigenes Motiv hochladen";
-    upload.addEventListener("click", () => $("#motifUpload").click());
-    grid.appendChild(upload);
-  }
-
-  async function selectMotif(src, tileEl) {
-    $$(".motif-tile").forEach(t => t.classList.remove("selected"));
-    if (tileEl) tileEl.classList.add("selected");
-    state.motif = { src, dataUrl: await urlToDataUrl(src) };
-    drawOverlay();
-    checkReady();
-  }
-
-  $("#motifUpload").addEventListener("change", async e => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const dataUrl = await fileToDataUrl(f);
-    // Add as a new tile + select it
-    const grid = $("#motifGrid");
-    const tile = document.createElement("div");
-    tile.className = "motif-tile";
-    tile.innerHTML = `<img src="${dataUrl}" alt="Eigenes Motiv" /><div class="badge">Ausgewählt</div>`;
-    grid.insertBefore(tile, grid.lastChild);
-    $$(".motif-tile").forEach(t => t.classList.remove("selected"));
-    tile.classList.add("selected");
-    state.motif = { src: dataUrl, dataUrl };
-    tile.addEventListener("click", () => {
-      $$(".motif-tile").forEach(t => t.classList.remove("selected"));
-      tile.classList.add("selected");
-      state.motif = { src: dataUrl, dataUrl };
-      drawOverlay();
-      checkReady();
-    });
-    drawOverlay();
-    checkReady();
-  });
-
-  // ------------------ Step 2: Tabs ------------------
-  $$(".tab").forEach(t => {
-    t.addEventListener("click", () => {
-      $$(".tab").forEach(x => x.classList.remove("active"));
-      t.classList.add("active");
-      const tab = t.dataset.tab;
-      $("#tab-cam").hidden = tab !== "cam";
-      $("#tab-upload").hidden = tab !== "upload";
-    });
-  });
-
-  // ------------------ Webcam ------------------
-  let stream = null;
-
-  $("#startCam").addEventListener("click", async () => {
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 2560 } },
-        audio: false
-      });
-      const v = $("#cam");
-      v.srcObject = stream;
-      await v.play();
-      $("#capture").disabled = false;
-      $("#startCam").textContent = "Kamera läuft";
-      $("#startCam").disabled = true;
-      drawOverlay();
-    } catch (e) {
-      setStatus(`Kamera-Zugriff fehlgeschlagen: ${e.message}`, "bad");
-    }
-  });
-
-  $("#overlayOpacity").addEventListener("input", e => {
-    state.overlayOpacity = e.target.value / 100;
-    drawOverlay();
-  });
-
-  function drawOverlay() {
-    const c = $("#overlay");
-    const ctx = c.getContext("2d");
-    const wrap = c.parentElement;
-    c.width = wrap.clientWidth;
-    c.height = wrap.clientHeight;
-    ctx.clearRect(0, 0, c.width, c.height);
-    if (!state.motif) return;
-    const img = new Image();
-    img.onload = () => {
-      // cover
-      const ar = img.width / img.height;
-      const car = c.width / c.height;
-      let dw, dh, dx, dy;
-      if (ar > car) {
-        dh = c.height; dw = dh * ar; dx = (c.width - dw) / 2; dy = 0;
-      } else {
-        dw = c.width; dh = dw / ar; dx = 0; dy = (c.height - dh) / 2;
-      }
-      ctx.globalAlpha = state.overlayOpacity;
-      ctx.drawImage(img, dx, dy, dw, dh);
-      ctx.globalAlpha = 1;
-    };
-    img.src = state.motif.src;
-  }
-
-  $("#capture").addEventListener("click", () => {
-    const v = $("#cam");
-    if (!v.videoWidth) return;
-    const snap = $("#snapshot");
-    snap.width = v.videoWidth;
-    snap.height = v.videoHeight;
-    const ctx = snap.getContext("2d");
-    // un-mirror for output
-    ctx.translate(snap.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(v, 0, 0, snap.width, snap.height);
-    const dataUrl = snap.toDataURL("image/jpeg", 0.92);
-    addPerson(dataUrl);
-    setStatus(`Foto ${state.persons.length} erfasst.`, "warn");
-  });
-
-  // ------------------ Upload tab ------------------
   $("#uploadZone").addEventListener("click", () => $("#personUpload").click());
   $("#uploadZone").addEventListener("dragover", e => { e.preventDefault(); });
   $("#uploadZone").addEventListener("drop", async e => {
@@ -534,15 +349,6 @@
     });
   });
 
-  // ------------------ Step 4: Engine ------------------
-  $$(".mode-card[data-engine]").forEach(card => {
-    card.addEventListener("click", () => {
-      $$(".mode-card[data-engine]").forEach(c => c.classList.remove("selected"));
-      card.classList.add("selected");
-      state.engine = card.dataset.engine;
-    });
-  });
-
   // ------------------ Step 4: Generate ------------------
   $("#generateBtn").addEventListener("click", generate);
   $("#regenerateBtn")?.addEventListener("click", generate);
@@ -550,11 +356,10 @@
   async function generate() {
     if (state.persons.length === 0) return;
     $("#generateBtn").disabled = true;
-    const engineLabel = state.engine === "openai" ? "OpenAI gpt-image-1.5" : "Nano Banana Pro";
-    setStatus(`<div class="spinner-wrap"><div class="spinner"></div>Generiere Plakat mit ${engineLabel}… das kann 15–60 Sekunden dauern.</div>`);
+    setStatus(`<div class="spinner-wrap"><div class="spinner"></div>Plakat wird generiert… das kann 15–60 Sekunden dauern.</div>`);
     try {
       const t0 = performance.now();
-      // Mehrere Bilder → Pro-Bild kleiner skalieren, damit Body unter Vercels 4,5 MB bleibt
+      // Mehrere Bilder → pro Bild kleiner skalieren, damit Body unter Vercels 4,5 MB bleibt
       const perImageMax = state.persons.length >= 4 ? 1100
         : state.persons.length >= 2 ? 1400
         : 1600;
@@ -568,7 +373,6 @@
         body: JSON.stringify({
           personImages: personsSmall,
           mode: state.mode,
-          engine: state.engine,
           aspectRatio: "3:4",
           imageSize: "4K"
         })
@@ -576,11 +380,10 @@
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
       const dur = ((performance.now() - t0) / 1000).toFixed(1);
-      $("#resultOriginal").src = state.motif.src;
       $("#resultImage").src = j.image;
       $("#downloadBtn").href = j.image;
       $("#resultCard").hidden = false;
-      setStatus(`Fertig in ${dur} s · ${j.engine === "openai" ? "gpt-image-1.5" : "Nano Banana Pro"}.${j.note ? " · Modell-Hinweis: " + j.note : ""}`, "warn");
+      setStatus(`Fertig in ${dur} s.`, "warn");
       $("#resultCard").scrollIntoView({ behavior: "smooth" });
     } catch (e) {
       setStatus(`Fehler: ${e.message}`, "bad");
@@ -590,15 +393,8 @@
   }
 
   // ------------------ Init ------------------
-  renderMotifs();
+  renderMotif();
   renderPersonGrid();
-  // Auto-select first motif
-  setTimeout(() => {
-    const first = $(".motif-tile");
-    if (first) first.click();
-  }, 50);
-
-  window.addEventListener("resize", drawOverlay);
 </script>
 
 </body>
