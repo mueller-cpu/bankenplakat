@@ -32,23 +32,26 @@
   section.card h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); }
   section.card p.help { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
 
-  /* Motif preview */
-  .motif-preview {
+  /* Motif grid */
+  .motif-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .motif-tile {
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
-    aspect-ratio: 3/4; max-width: 280px; position: relative;
+    cursor: pointer; position: relative; aspect-ratio: 3/4; transition: transform .12s ease, border-color .12s ease;
   }
-  .motif-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .motif-upload {
+  .motif-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .motif-tile.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,140,255,0.25); }
+  .motif-tile:hover { transform: translateY(-2px); }
+  .motif-tile .badge {
+    position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); color: #fff;
+    padding: 4px 8px; border-radius: 999px; font-size: 11px; opacity: 0; transition: opacity .12s;
+  }
+  .motif-tile.selected .badge { opacity: 1; background: var(--accent); }
+  .motif-upload-tile {
     background: var(--panel-2); border: 1px dashed var(--line); border-radius: 10px;
-    aspect-ratio: 3/4; max-width: 280px; display: flex; align-items: center; justify-content: center;
-    color: var(--muted); cursor: pointer; text-align: center; font-size: 13px; padding: 16px;
+    aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); cursor: pointer; text-align: center; font-size: 13px; padding: 12px;
   }
-  .motif-upload:hover { border-color: var(--accent); color: var(--text); }
-  .motif-replace {
-    margin-top: 10px; color: var(--muted); font-size: 12px; cursor: pointer;
-    text-decoration: underline;
-  }
-  .motif-replace:hover { color: var(--text); }
+  .motif-upload-tile:hover { border-color: var(--accent); color: var(--text); }
 
   /* Buttons */
   .btn {
@@ -140,11 +143,9 @@
 
   <!-- Step 1: Motiv -->
   <section class="card">
-    <h2><span class="step-num">1</span>Pose-Schablone hochladen</h2>
-    <p class="help">Eigenes Plakat-Motiv hochladen. Dient nur als visuelle Orientierung — wird nicht weiterverarbeitet.</p>
-    <div id="motifContainer">
-      <div class="motif-upload" id="motifUploadTile">+ Motiv auswählen</div>
-    </div>
+    <h2><span class="step-num">1</span>Pose-Schablone wählen</h2>
+    <p class="help">Vorlage aussuchen oder eigenes Motiv hochladen. Dient nur als visuelle Orientierung — wird nicht ans Modell gesendet.</p>
+    <div class="motif-grid" id="motifGrid"></div>
     <input type="file" id="motifUpload" accept="image/*" hidden />
   </section>
 
@@ -200,10 +201,15 @@
   // ------------------ State ------------------
   const MAX_PERSONS = 5;
   const state = {
-    motif: null,         // dataUrl — nur visuelle Vorschau, geht nicht ans Backend
+    motif: null,         // { src } — nur visuelle Vorschau, geht nicht ans Backend
     persons: [],         // dataUrl[] — first one is the primary anchor
     mode: "face",
   };
+
+  const DEFAULT_MOTIFS = [
+    { src: "/motifs/mann_schafe.png", label: "Mann · Schafe" },
+    { src: "/motifs/frau_schafe.png", label: "Frau · Schafe" }
+  ];
 
   // ------------------ Utils ------------------
   const $ = sel => document.querySelector(sel);
@@ -248,33 +254,40 @@
   }
 
   // ------------------ Step 1: Motiv ------------------
-  function renderMotif() {
-    const container = $("#motifContainer");
-    container.innerHTML = "";
-    if (state.motif) {
-      const preview = document.createElement("div");
-      preview.className = "motif-preview";
-      preview.innerHTML = `<img src="${state.motif}" alt="Motiv-Vorschau" />`;
-      container.appendChild(preview);
-      const replace = document.createElement("div");
-      replace.className = "motif-replace";
-      replace.textContent = "Anderes Motiv hochladen";
-      replace.addEventListener("click", () => $("#motifUpload").click());
-      container.appendChild(replace);
-    } else {
+  function renderMotifs() {
+    const grid = $("#motifGrid");
+    grid.innerHTML = "";
+    DEFAULT_MOTIFS.forEach(m => {
       const tile = document.createElement("div");
-      tile.className = "motif-upload";
-      tile.textContent = "+ Motiv auswählen";
-      tile.addEventListener("click", () => $("#motifUpload").click());
-      container.appendChild(tile);
-    }
+      tile.className = "motif-tile";
+      tile.innerHTML = `<img src="${m.src}" alt="${m.label}" /><div class="badge">Ausgewählt</div>`;
+      tile.addEventListener("click", () => selectMotif(m.src, tile));
+      grid.appendChild(tile);
+    });
+    const upload = document.createElement("div");
+    upload.className = "motif-upload-tile";
+    upload.textContent = "+ Eigenes Motiv hochladen";
+    upload.addEventListener("click", () => $("#motifUpload").click());
+    grid.appendChild(upload);
+  }
+
+  function selectMotif(src, tileEl) {
+    $$(".motif-tile").forEach(t => t.classList.remove("selected"));
+    if (tileEl) tileEl.classList.add("selected");
+    state.motif = { src };
   }
 
   $("#motifUpload").addEventListener("change", async e => {
     const f = e.target.files?.[0];
     if (!f) return;
-    state.motif = await fileToDataUrl(f);
-    renderMotif();
+    const dataUrl = await fileToDataUrl(f);
+    const grid = $("#motifGrid");
+    const tile = document.createElement("div");
+    tile.className = "motif-tile";
+    tile.innerHTML = `<img src="${dataUrl}" alt="Eigenes Motiv" /><div class="badge">Ausgewählt</div>`;
+    grid.insertBefore(tile, grid.lastChild);
+    tile.addEventListener("click", () => selectMotif(dataUrl, tile));
+    selectMotif(dataUrl, tile);
     e.target.value = "";
   });
 
@@ -393,8 +406,13 @@
   }
 
   // ------------------ Init ------------------
-  renderMotif();
+  renderMotifs();
   renderPersonGrid();
+  // erstes Motiv vorauswählen
+  setTimeout(() => {
+    const first = $(".motif-tile");
+    if (first) first.click();
+  }, 50);
 </script>
 
 </body>
