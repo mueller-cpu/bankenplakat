@@ -120,8 +120,24 @@ OUTPUT
 
 // gpt-image-1.5 folgt langen "DO NOT"-Listen schlechter als Gemini und reagiert
 // stark auf knappe, positiv formulierte Anweisungen mit klarer Reihenfolge.
+// Composition mit harten Prozenten muss vor allem anderen stehen, sonst zentriert
+// das Modell die Person und der Headline-Headroom oben fehlt.
+const OPENAI_HEADROOM_SPEC = `COMPOSITION (read first, non-negotiable — this is a poster with a headline area)
+- Output is a 1024×1536 vertical portrait. Imagine a horizontal line at 45% from the TOP of the frame.
+- TOP 45% (above that line): nothing but smooth, calm, uncluttered open sky. NO head, NO hair, NO face, NO sheep, NO hilltops, NO clouds with dense detail. This top area is reserved for poster text — it must be visually empty.
+- The very top of the subject's head sits at approximately 45% from the top, NOT higher. The subject's eyes are at approximately 60% from the top.
+- BOTTOM 55%: the subject framed head-and-shoulders to mid-torso, with sheep and gentle green hills arranged around and behind them. Horizon line is at or below the subject's eye level — never above the head.
+- The subject is NOT centered vertically. They sit in the LOWER half of the frame, with empty sky above for headline overlay.
+
+SCENE
+- Outdoor pastoral setting: gentle green rolling hills, a small flock of sheep around and behind the subject (never above the head into the sky area), open sky above.
+- Soft overcast daylight, gentle directional light, no harsh shadows.
+- Muted slightly cool greens, soft natural skin tones, analog/film look (subtle grain, gentle contrast), shallow depth of field.`;
+
 const OPENAI_PROMPTS = {
-  face: `Create a photorealistic 3:4 portrait of the person shown in the reference images, for a printed bank campaign poster.
+  face: `Create a photorealistic vertical portrait of the person shown in the reference images, for a printed bank campaign poster.
+
+${OPENAI_HEADROOM_SPEC}
 
 Reference image order (critical):
 - Image 1 is the PRIMARY anchor: identity AND expression. The output's face must look exactly like image 1, and the output's expression (mouth, eyes, brows) must match image 1 exactly — same smile or neutral, same intensity, same teeth visibility, same eye crinkle.
@@ -132,11 +148,11 @@ Identity to preserve 1:1: bone structure, eye shape and color, nose, mouth, hair
 
 Wardrobe: business attire suitable for a bank (dark blazer, suit or shirt). Compose fresh.
 
-${SCENE_SPEC}
+Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Reminder: the top 45% of the frame must be empty sky.`,
 
-Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Headline-ready: upper third must be calm sky.`,
+  full: `Create a photorealistic vertical portrait of the person shown in the reference images, for a printed bank campaign poster.
 
-  full: `Create a photorealistic 3:4 portrait of the person shown in the reference images, for a printed bank campaign poster.
+${OPENAI_HEADROOM_SPEC}
 
 Reference image order (critical):
 - Image 1 is the PRIMARY anchor: identity, expression, body, outfit and pose. Reproduce the face AND the expression of image 1 exactly (same smile or neutral, same intensity). Reproduce the outfit (every garment, color, pattern, fit, accessories, watch, shoes) and body proportions and pose from image 1.
@@ -145,9 +161,7 @@ Reference image order (critical):
 
 Identity to preserve 1:1: full face features, hair, skin tone and texture, glasses, body proportions, height and build. Keep the person looking like themselves — do not idealize, smooth, slim or beautify.
 
-${SCENE_SPEC}
-
-Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Headline-ready: upper third must be calm sky.`
+Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Reminder: the top 45% of the frame must be empty sky.`
 };
 
 async function makeFaceCropBuffer(buffer) {
