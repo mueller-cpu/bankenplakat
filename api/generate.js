@@ -123,10 +123,11 @@ OUTPUT
 // Composition mit harten Prozenten muss vor allem anderen stehen, sonst zentriert
 // das Modell die Person und der Headline-Headroom oben fehlt.
 const OPENAI_HEADROOM_SPEC = `COMPOSITION (read first, non-negotiable — this is a poster with a headline area)
-- Output is a 1024×1536 vertical portrait. Imagine a horizontal line at 45% from the TOP of the frame.
-- TOP 45% (above that line): nothing but smooth, calm, uncluttered open sky. NO head, NO hair, NO face, NO sheep, NO hilltops, NO clouds with dense detail. This top area is reserved for poster text — it must be visually empty.
-- The very top of the subject's head sits at approximately 45% from the top, NOT higher. The subject's eyes are at approximately 60% from the top.
-- BOTTOM 55%: the subject framed head-and-shoulders to mid-torso, with sheep and gentle green hills arranged around and behind them. Horizon line is at or below the subject's eye level — never above the head.
+- Output is a 1024×1536 vertical portrait. Imagine a horizontal line at 50% from the TOP of the frame.
+- TOP 50% (above that line): nothing but smooth, calm, uncluttered open sky. NO head, NO hair, NO face, NO sheep, NO hilltops, NO clouds with dense detail. This top half is reserved for poster text — it must be visually empty.
+- The very top of the subject's head sits AT or BELOW 50% from the top, NEVER higher. The subject's eyes are at approximately 62% from the top. Horizon line is below the eyes.
+- BOTTOM 50%: the subject framed head-and-shoulders to mid-torso, with sheep and gentle green hills arranged around and behind them.
+- Camera distance: medium shot, like a 50mm lens at ~3 metres. The subject is a person standing in a landscape, NOT a close-up portrait dominating the frame. The head fills roughly 12–15% of the frame height — small enough that there is real landscape around them.
 - The subject is NOT centered vertically. They sit in the LOWER half of the frame, with empty sky above for headline overlay.
 
 SCENE
@@ -148,7 +149,7 @@ Identity to preserve 1:1: bone structure, eye shape and color, nose, mouth, hair
 
 Wardrobe: business attire suitable for a bank (dark blazer, suit or shirt). Compose fresh.
 
-Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Reminder: the top 45% of the frame must be empty sky.`,
+Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Reminder: the top 50% of the frame must be empty sky, the head fills ~12–15% of the frame height (medium shot, NOT a close-up).`,
 
   full: `Create a photorealistic vertical portrait of the person shown in the reference images, for a printed bank campaign poster.
 
@@ -161,7 +162,7 @@ Reference image order (critical):
 
 Identity to preserve 1:1: full face features, hair, skin tone and texture, glasses, body proportions, height and build. Keep the person looking like themselves — do not idealize, smooth, slim or beautify.
 
-Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Reminder: the top 45% of the frame must be empty sky.`
+Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Reminder: the top 50% of the frame must be empty sky, the head fills ~12–15% of the frame height (medium shot, NOT a close-up).`
 };
 
 async function makeFaceCropBuffer(buffer) {
@@ -176,19 +177,6 @@ async function makeFaceCropBuffer(buffer) {
   return sharp(buffer)
     .extract({ left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight })
     .jpeg({ quality: 92 })
-    .toBuffer();
-}
-
-// Layout-Referenz für openai: stark verkleinert + geblurrt, damit gpt-image-1.5
-// die makro-komposition (subject-position, headroom, schafe-verteilung) sieht,
-// aber keine identifizierbaren gesichtszüge der layout-person mehr — sonst
-// mischt das modell die fremde identität in den output.
-async function makeLayoutReferenceBuffer(buffer) {
-  return sharp(buffer)
-    .resize({ width: 384, height: 512, fit: "cover" })
-    .blur(8)
-    .modulate({ saturation: 0.6 })
-    .jpeg({ quality: 70 })
     .toBuffer();
 }
 
@@ -241,15 +229,12 @@ async function callGemini({ persons, mode, faceCropBuffer, aspectRatio, imageSiz
   return { imageDataUrl: `data:${outMime};base64,${outBase64}`, note: textNote.trim() };
 }
 
-async function callOpenAI({ persons, mode, faceCropBuffer, motif, quality }) {
+async function callOpenAI({ persons, mode, faceCropBuffer, quality }) {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is not set in environment.");
   }
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const basePrompt = mode === "full" ? OPENAI_PROMPTS.full : OPENAI_PROMPTS.face;
-  const prompt = motif
-    ? `${basePrompt}\n\nLAYOUT REFERENCE (last image only — heavily blurred on purpose)\n- The very LAST image is a heavily BLURRED, low-resolution layout sketch from an existing poster. It contains NO usable identity information by design.\n- Use it ONLY for macro composition: where the subject sits in the frame, head position, body scale relative to the frame, horizon line height, where empty sky sits, rough sheep distribution.\n- Do NOT try to read any face, features, hair, skin tone, expression or clothing from this blurred image. The person in it is a different person and the blur is intentional to prevent identity mixing.\n- Identity and expression come EXCLUSIVELY from the sharp person reference images above. The layout reference defines WHERE, the person references define WHO and HOW.`
-    : basePrompt;
+  const prompt = mode === "full" ? OPENAI_PROMPTS.full : OPENAI_PROMPTS.face;
 
   const files = [];
   for (let i = 0; i < persons.length; i++) {
@@ -260,11 +245,6 @@ async function callOpenAI({ persons, mode, faceCropBuffer, motif, quality }) {
   }
   if (faceCropBuffer) {
     files.push(await toFile(faceCropBuffer, "face-crop.jpg", { type: "image/jpeg" }));
-  }
-  if (motif) {
-    const motifBuf = Buffer.from(motif.data, "base64");
-    const blurred = await makeLayoutReferenceBuffer(motifBuf);
-    files.push(await toFile(blurred, "layout-reference-blurred.jpg", { type: "image/jpeg" }));
   }
 
   let result;
@@ -302,7 +282,6 @@ export default async function handler(req, res) {
     const {
       personImage,
       personImages,
-      motifImage,
       mode = "face",
       engine = "gemini",
       aspectRatio = "3:4",
@@ -332,8 +311,7 @@ export default async function handler(req, res) {
 
     let out;
     if (engine === "openai") {
-      const motif = motifImage ? parseDataUrl(motifImage) : null;
-      out = await callOpenAI({ persons, mode, faceCropBuffer, motif, quality });
+      out = await callOpenAI({ persons, mode, faceCropBuffer, quality });
     } else {
       out = await callGemini({ persons, mode, faceCropBuffer, aspectRatio, imageSize });
     }
