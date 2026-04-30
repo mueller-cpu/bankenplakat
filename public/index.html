@@ -46,12 +46,6 @@
     padding: 4px 8px; border-radius: 999px; font-size: 11px; opacity: 0; transition: opacity .12s;
   }
   .motif-tile.selected .badge { opacity: 1; background: var(--accent); }
-  .motif-upload-tile {
-    background: var(--panel-2); border: 1px dashed var(--line); border-radius: 10px;
-    aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center;
-    color: var(--muted); cursor: pointer; text-align: center; font-size: 13px; padding: 12px;
-  }
-  .motif-upload-tile:hover { border-color: var(--accent); color: var(--text); }
 
   /* Buttons */
   .btn {
@@ -144,9 +138,8 @@
   <!-- Step 1: Motiv -->
   <section class="card">
     <h2><span class="step-num">1</span>Pose-Schablone wählen</h2>
-    <p class="help">Vorlage aussuchen oder eigenes Motiv hochladen. Dient nur als visuelle Orientierung — wird nicht ans Modell gesendet.</p>
+    <p class="help">Vorlage aussuchen. Dient nur als visuelle Orientierung — wird nicht ans Modell gesendet.</p>
     <div class="motif-grid" id="motifGrid"></div>
-    <input type="file" id="motifUpload" accept="image/*" hidden />
   </section>
 
   <!-- Step 2: Person -->
@@ -264,11 +257,6 @@
       tile.addEventListener("click", () => selectMotif(m.src, tile));
       grid.appendChild(tile);
     });
-    const upload = document.createElement("div");
-    upload.className = "motif-upload-tile";
-    upload.textContent = "+ Eigenes Motiv hochladen";
-    upload.addEventListener("click", () => $("#motifUpload").click());
-    grid.appendChild(upload);
   }
 
   function selectMotif(src, tileEl) {
@@ -276,20 +264,6 @@
     if (tileEl) tileEl.classList.add("selected");
     state.motif = { src };
   }
-
-  $("#motifUpload").addEventListener("change", async e => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const dataUrl = await fileToDataUrl(f);
-    const grid = $("#motifGrid");
-    const tile = document.createElement("div");
-    tile.className = "motif-tile";
-    tile.innerHTML = `<img src="${dataUrl}" alt="Eigenes Motiv" /><div class="badge">Ausgewählt</div>`;
-    grid.insertBefore(tile, grid.lastChild);
-    tile.addEventListener("click", () => selectMotif(dataUrl, tile));
-    selectMotif(dataUrl, tile);
-    e.target.value = "";
-  });
 
   // ------------------ Step 2: Personenfotos ------------------
   function renderPersonGrid() {
