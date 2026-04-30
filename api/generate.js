@@ -131,7 +131,7 @@ The person in the output MUST be the exact same real person shown in the attache
 If the person in the output does not look like the reference photos, the result is unusable.
 
 SCENE
-Place this exact person outdoors in a pastoral setting: gentle green rolling hills, a small flock of sheep around and behind them, soft overcast daylight, analog/film look. Wardrobe: business attire (dark blazer or suit). Photorealistic, no AI-glossy skin.
+Place this exact person outdoors in a pastoral setting: gentle green rolling hills, a small flock of sheep around and behind them, soft overcast daylight, analog/film look. Wardrobe: business-appropriate attire matching the person's apparent gender and style as shown in the references — do NOT default to a man's suit if the references show a woman or someone in different clothing. Photorealistic, no AI-glossy skin.
 
 COMPOSITION (1024×1536 portrait poster — headline area on top)
 - Top 40% of the frame: empty calm sky. No head, no hair, no sheep, no hilltops, no busy clouds. This area is for poster text.
@@ -139,7 +139,7 @@ COMPOSITION (1024×1536 portrait poster — headline area on top)
 - Bottom 60%: subject framed head-and-shoulders to chest, sheep and hills around them.
 - Medium shot — the head fills roughly 20–25% of the frame height. Enough resolution to clearly recognize the person's face.
 
-REMINDER: Identity from the reference photos is the most important element. The person must look like themselves.`,
+REMINDER: The person in the output must be the SAME person as in the reference photos — same face, same gender, same age, same hair, same skin tone. If you are uncertain about any feature, look at the reference photos again. Do NOT generate a generic person.`,
 
   full: `IDENTITY (absolute top priority)
 The person in the output MUST be the exact same real person shown in the attached reference photos — same face, body, outfit and expression. Reproduce face, hair, skin, glasses, body proportions, height, build. The output is a recognizable photo of THIS specific person.
@@ -149,7 +149,7 @@ The person in the output MUST be the exact same real person shown in the attache
 If the person in the output does not look like the reference photos, the result is unusable.
 
 SCENE
-Place this exact person outdoors in a pastoral setting: gentle green rolling hills, a small flock of sheep around and behind them, soft overcast daylight, analog/film look. Photorealistic, no AI-glossy skin.
+Place this exact person outdoors in a pastoral setting: gentle green rolling hills, a small flock of sheep around and behind them, soft overcast daylight, analog/film look. The person wears the exact outfit from the PRIMARY reference image — do NOT change the outfit. Photorealistic, no AI-glossy skin.
 
 COMPOSITION (1024×1536 portrait poster — headline area on top)
 - Top 40% of the frame: empty calm sky. No head, no sheep, no hilltops. This area is for poster text.
@@ -157,7 +157,7 @@ COMPOSITION (1024×1536 portrait poster — headline area on top)
 - Bottom 60%: subject head-and-shoulders to chest, sheep and hills around them.
 - Medium shot — the head fills roughly 20–25% of the frame height. Enough resolution to clearly recognize the person.
 
-REMINDER: Identity from the reference photos is the most important element. The person must look like themselves.`
+REMINDER: The person in the output must be the SAME person as in the reference photos — same face, same gender, same age, same hair, same skin tone, same outfit. Do NOT generate a generic person.`
 };
 
 async function makeFaceCropBuffer(buffer) {
@@ -250,6 +250,7 @@ async function callOpenAI({ persons, mode, faceCropBuffer, quality }) {
       prompt,
       size: "1024x1536",
       quality: quality || "high",
+      input_fidelity: "high",
       n: 1
     });
   } catch (err) {
