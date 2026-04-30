@@ -122,47 +122,42 @@ OUTPUT
 // stark auf knappe, positiv formulierte Anweisungen mit klarer Reihenfolge.
 // Composition mit harten Prozenten muss vor allem anderen stehen, sonst zentriert
 // das Modell die Person und der Headline-Headroom oben fehlt.
-const OPENAI_HEADROOM_SPEC = `COMPOSITION (read first, non-negotiable — this is a poster with a headline area)
-- Output is a 1024×1536 vertical portrait. Imagine a horizontal line at 50% from the TOP of the frame.
-- TOP 50% (above that line): nothing but smooth, calm, uncluttered open sky. NO head, NO hair, NO face, NO sheep, NO hilltops, NO clouds with dense detail. This top half is reserved for poster text — it must be visually empty.
-- The very top of the subject's head sits AT or BELOW 50% from the top, NEVER higher. The subject's eyes are at approximately 62% from the top. Horizon line is below the eyes.
-- BOTTOM 50%: the subject framed head-and-shoulders to mid-torso, with sheep and gentle green hills arranged around and behind them.
-- Camera distance: medium shot, like a 50mm lens at ~3 metres. The subject is a person standing in a landscape, NOT a close-up portrait dominating the frame. The head fills roughly 12–15% of the frame height — small enough that there is real landscape around them.
-- The subject is NOT centered vertically. They sit in the LOWER half of the frame, with empty sky above for headline overlay.
+const OPENAI_PROMPTS = {
+  face: `IDENTITY (absolute top priority)
+The person in the output MUST be the exact same real person shown in the attached reference photos. Same face, same bone structure, same eyes, nose, mouth, hairline, hair, skin tone, freckles, moles, scars, glasses, apparent age and weight. The output is a recognizable photo of THIS specific person — not a similar-looking person, not a stylized version, not an idealized version.
+- Image 1 is the PRIMARY: identity AND expression come from here. Reproduce the expression (smile, neutral, half-smile) exactly as in image 1.
+- Images 2..N are additional angles of the SAME person — use only to confirm features.
+- Last image is a tight face-crop from image 1 for pixel-level identity verification.
+If the person in the output does not look like the reference photos, the result is unusable.
 
 SCENE
-- Outdoor pastoral setting: gentle green rolling hills, a small flock of sheep around and behind the subject (never above the head into the sky area), open sky above.
-- Soft overcast daylight, gentle directional light, no harsh shadows.
-- Muted slightly cool greens, soft natural skin tones, analog/film look (subtle grain, gentle contrast), shallow depth of field.`;
+Place this exact person outdoors in a pastoral setting: gentle green rolling hills, a small flock of sheep around and behind them, soft overcast daylight, analog/film look. Wardrobe: business attire (dark blazer or suit). Photorealistic, no AI-glossy skin.
 
-const OPENAI_PROMPTS = {
-  face: `Create a photorealistic vertical portrait of the person shown in the reference images, for a printed bank campaign poster.
+COMPOSITION (1024×1536 portrait poster — headline area on top)
+- Top 40% of the frame: empty calm sky. No head, no hair, no sheep, no hilltops, no busy clouds. This area is for poster text.
+- Subject's head top sits at the 40% line. Eyes around 55% from top. Horizon below the eyes.
+- Bottom 60%: subject framed head-and-shoulders to chest, sheep and hills around them.
+- Medium shot — the head fills roughly 20–25% of the frame height. Enough resolution to clearly recognize the person's face.
 
-${OPENAI_HEADROOM_SPEC}
+REMINDER: Identity from the reference photos is the most important element. The person must look like themselves.`,
 
-Reference image order (critical):
-- Image 1 is the PRIMARY anchor: identity AND expression. The output's face must look exactly like image 1, and the output's expression (mouth, eyes, brows) must match image 1 exactly — same smile or neutral, same intensity, same teeth visibility, same eye crinkle.
-- Images 2..N are additional views of the SAME person. Use them only to confirm identity (bone structure, features, hair). Do NOT average their expressions into the result.
-- The final image is a tight face-crop from the primary reference for pixel-level identity verification.
+  full: `IDENTITY (absolute top priority)
+The person in the output MUST be the exact same real person shown in the attached reference photos — same face, body, outfit and expression. Reproduce face, hair, skin, glasses, body proportions, height, build. The output is a recognizable photo of THIS specific person.
+- Image 1 is the PRIMARY: identity, expression, body, outfit and pose all come from here. Reproduce outfit (every garment, color, pattern, fit, accessories, watch, shoes) exactly.
+- Images 2..N are additional angles of the SAME person — use only to confirm features.
+- Last image is a tight face-crop from image 1 for pixel-level identity verification.
+If the person in the output does not look like the reference photos, the result is unusable.
 
-Identity to preserve 1:1: bone structure, eye shape and color, nose, mouth, hairline, hair color and texture, skin tone, freckles, moles, scars, glasses (exact model if present), apparent age and weight. Keep the person looking like themselves — do not idealize, smooth, slim or beautify.
+SCENE
+Place this exact person outdoors in a pastoral setting: gentle green rolling hills, a small flock of sheep around and behind them, soft overcast daylight, analog/film look. Photorealistic, no AI-glossy skin.
 
-Wardrobe: business attire suitable for a bank (dark blazer, suit or shirt). Compose fresh.
+COMPOSITION (1024×1536 portrait poster — headline area on top)
+- Top 40% of the frame: empty calm sky. No head, no sheep, no hilltops. This area is for poster text.
+- Subject's head top sits at the 40% line. Eyes around 55% from top.
+- Bottom 60%: subject head-and-shoulders to chest, sheep and hills around them.
+- Medium shot — the head fills roughly 20–25% of the frame height. Enough resolution to clearly recognize the person.
 
-Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Reminder: the top 50% of the frame must be empty sky, the head fills ~12–15% of the frame height (medium shot, NOT a close-up).`,
-
-  full: `Create a photorealistic vertical portrait of the person shown in the reference images, for a printed bank campaign poster.
-
-${OPENAI_HEADROOM_SPEC}
-
-Reference image order (critical):
-- Image 1 is the PRIMARY anchor: identity, expression, body, outfit and pose. Reproduce the face AND the expression of image 1 exactly (same smile or neutral, same intensity). Reproduce the outfit (every garment, color, pattern, fit, accessories, watch, shoes) and body proportions and pose from image 1.
-- Images 2..N are additional views of the SAME person. Use them only to confirm identity. Do NOT average their expressions, outfits or poses into the result.
-- The final image is a tight face-crop from the primary reference for pixel-level identity verification.
-
-Identity to preserve 1:1: full face features, hair, skin tone and texture, glasses, body proportions, height and build. Keep the person looking like themselves — do not idealize, smooth, slim or beautify.
-
-Look: photorealistic, analog/film, gentle grain, no AI-glossy skin, no illustration, no text, no logos, no watermark, no border. Reminder: the top 50% of the frame must be empty sky, the head fills ~12–15% of the frame height (medium shot, NOT a close-up).`
+REMINDER: Identity from the reference photos is the most important element. The person must look like themselves.`
 };
 
 async function makeFaceCropBuffer(buffer) {
