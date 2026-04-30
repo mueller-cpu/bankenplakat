@@ -1,6 +1,6 @@
 // Vercel Serverless Function – komponiert die hochgeladene Person ins
 // Bankenplakat-Motiv. Engine wählbar: "gemini" (Nano Banana Pro) oder
-// "openai" (gpt-image-2).
+// "openai" (gpt-image-1.5).
 
 import { GoogleGenAI } from "@google/genai";
 import OpenAI, { toFile } from "openai";
@@ -118,7 +118,7 @@ OUTPUT
 - Portrait orientation 3:4, suitable for a printed poster with headline overlay in the upper third.`
 };
 
-// gpt-image-2 folgt langen "DO NOT"-Listen schlechter als Gemini und reagiert
+// gpt-image-1.5 folgt langen "DO NOT"-Listen schlechter als Gemini und reagiert
 // stark auf knappe, positiv formulierte Anweisungen mit klarer Reihenfolge.
 const OPENAI_PROMPTS = {
   face: `Create a photorealistic 3:4 portrait of the person shown in the reference images, for a printed bank campaign poster.
@@ -232,14 +232,24 @@ async function callOpenAI({ persons, mode, faceCropBuffer, quality }) {
     files.push(await toFile(faceCropBuffer, "face-crop.jpg", { type: "image/jpeg" }));
   }
 
-  const result = await openai.images.edit({
-    model: "gpt-image-2",
-    image: files,
-    prompt,
-    size: "1152x1536",
-    quality: quality || "high",
-    n: 1
-  });
+  let result;
+  try {
+    result = await openai.images.edit({
+      model: "gpt-image-1.5",
+      image: files,
+      prompt,
+      size: "1024x1536",
+      quality: quality || "high",
+      n: 1
+    });
+  } catch (err) {
+    const status = err?.status || err?.response?.status;
+    const code = err?.code || err?.error?.code;
+    const detail = err?.error?.message || err?.message || String(err);
+    const msg = `OpenAI ${status || ""} ${code || ""}: ${detail}`.trim();
+    console.error("openai images.edit failed:", { status, code, detail, raw: err });
+    throw new Error(msg);
+  }
 
   const b64 = result?.data?.[0]?.b64_json;
   if (!b64) {
