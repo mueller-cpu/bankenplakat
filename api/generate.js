@@ -228,12 +228,15 @@ async function callGemini({ persons, mode, faceCropBuffer, aspectRatio, imageSiz
   return { imageDataUrl: `data:${outMime};base64,${outBase64}`, note: textNote.trim() };
 }
 
-async function callOpenAI({ persons, mode, faceCropBuffer, quality }) {
+async function callOpenAI({ persons, mode, faceCropBuffer, motif, quality }) {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is not set in environment.");
   }
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const prompt = mode === "full" ? OPENAI_PROMPTS.full : OPENAI_PROMPTS.face;
+  const basePrompt = mode === "full" ? OPENAI_PROMPTS.full : OPENAI_PROMPTS.face;
+  const prompt = motif
+    ? `${basePrompt}\n\nLAYOUT REFERENCE (last image only)\n- The very LAST image attached is a layout/composition reference from an existing poster. Use it ONLY for: framing, head position in the frame, body scale relative to the frame, distance subject-to-camera, horizon line height, and where empty sky sits. The subject in the layout reference is NOT the same person — IGNORE its face, identity, expression, hair, skin tone and clothing. Match the LAYOUT, not the LOOK.`
+    : basePrompt;
 
   const files = [];
   for (let i = 0; i < persons.length; i++) {
@@ -244,6 +247,11 @@ async function callOpenAI({ persons, mode, faceCropBuffer, quality }) {
   }
   if (faceCropBuffer) {
     files.push(await toFile(faceCropBuffer, "face-crop.jpg", { type: "image/jpeg" }));
+  }
+  if (motif) {
+    const motifBuf = Buffer.from(motif.data, "base64");
+    const ext = (motif.mime.split("/")[1] || "png").replace("jpeg", "jpg");
+    files.push(await toFile(motifBuf, `layout-reference.${ext}`, { type: motif.mime }));
   }
 
   let result;
@@ -281,6 +289,7 @@ export default async function handler(req, res) {
     const {
       personImage,
       personImages,
+      motifImage,
       mode = "face",
       engine = "gemini",
       aspectRatio = "3:4",
@@ -310,7 +319,8 @@ export default async function handler(req, res) {
 
     let out;
     if (engine === "openai") {
-      out = await callOpenAI({ persons, mode, faceCropBuffer, quality });
+      const motif = motifImage ? parseDataUrl(motifImage) : null;
+      out = await callOpenAI({ persons, mode, faceCropBuffer, motif, quality });
     } else {
       out = await callGemini({ persons, mode, faceCropBuffer, aspectRatio, imageSize });
     }

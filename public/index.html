@@ -168,7 +168,7 @@
   <!-- Step 1: Motiv -->
   <section class="card">
     <h2><span class="step-num">1</span>Pose-Schablone wählen</h2>
-    <p class="help">Dient nur als halbtransparente Hilfe beim Webcam-Posieren — die KI erzeugt die Szene (Schafe, Hügel, Himmel) eigenständig anhand einer Text-Spezifikation und übernimmt nichts mehr aus diesem Motiv.</p>
+    <p class="help">Halbtransparente Hilfe beim Webcam-Posieren. Bei <strong>Gemini</strong>: rein als Pose-Hilfe (kein KI-Einfluss). Bei <strong>OpenAI</strong>: zusätzlich als Layout-Referenz an die KI mitgegeben — Framing, Kopfposition, Headroom werden übernommen, Identität und Mimik nicht.</p>
     <div class="motif-grid" id="motifGrid"></div>
     <input type="file" id="motifUpload" accept="image/*" hidden />
   </section>
@@ -562,11 +562,18 @@
       for (const p of state.persons) {
         personsSmall.push(await resizeDataUrl(p, perImageMax, 0.9));
       }
+      // Motiv nur für openai mitschicken (gemini hatte bei beiliegendem motiv
+      // mimik/pose geleakt — bei openai dient es als reine layout-referenz).
+      let motifSmall = null;
+      if (state.engine === "openai" && state.motif?.dataUrl) {
+        motifSmall = await resizeDataUrl(state.motif.dataUrl, 1100, 0.85);
+      }
       const r = await fetch("/api/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           personImages: personsSmall,
+          motifImage: motifSmall,
           mode: state.mode,
           engine: state.engine,
           aspectRatio: "3:4",
