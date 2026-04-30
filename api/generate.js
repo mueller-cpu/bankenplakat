@@ -179,6 +179,19 @@ async function makeFaceCropBuffer(buffer) {
     .toBuffer();
 }
 
+// Layout-Referenz für openai: stark verkleinert + geblurrt, damit gpt-image-1.5
+// die makro-komposition (subject-position, headroom, schafe-verteilung) sieht,
+// aber keine identifizierbaren gesichtszüge der layout-person mehr — sonst
+// mischt das modell die fremde identität in den output.
+async function makeLayoutReferenceBuffer(buffer) {
+  return sharp(buffer)
+    .resize({ width: 384, height: 512, fit: "cover" })
+    .blur(8)
+    .modulate({ saturation: 0.6 })
+    .jpeg({ quality: 70 })
+    .toBuffer();
+}
+
 async function callGemini({ persons, mode, faceCropBuffer, aspectRatio, imageSize }) {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not set in environment.");
@@ -235,7 +248,7 @@ async function callOpenAI({ persons, mode, faceCropBuffer, motif, quality }) {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const basePrompt = mode === "full" ? OPENAI_PROMPTS.full : OPENAI_PROMPTS.face;
   const prompt = motif
-    ? `${basePrompt}\n\nLAYOUT REFERENCE (last image only)\n- The very LAST image attached is a layout/composition reference from an existing poster. Use it ONLY for: framing, head position in the frame, body scale relative to the frame, distance subject-to-camera, horizon line height, and where empty sky sits. The subject in the layout reference is NOT the same person — IGNORE its face, identity, expression, hair, skin tone and clothing. Match the LAYOUT, not the LOOK.`
+    ? `${basePrompt}\n\nLAYOUT REFERENCE (last image only — heavily blurred on purpose)\n- The very LAST image is a heavily BLURRED, low-resolution layout sketch from an existing poster. It contains NO usable identity information by design.\n- Use it ONLY for macro composition: where the subject sits in the frame, head position, body scale relative to the frame, horizon line height, where empty sky sits, rough sheep distribution.\n- Do NOT try to read any face, features, hair, skin tone, expression or clothing from this blurred image. The person in it is a different person and the blur is intentional to prevent identity mixing.\n- Identity and expression come EXCLUSIVELY from the sharp person reference images above. The layout reference defines WHERE, the person references define WHO and HOW.`
     : basePrompt;
 
   const files = [];
@@ -250,8 +263,8 @@ async function callOpenAI({ persons, mode, faceCropBuffer, motif, quality }) {
   }
   if (motif) {
     const motifBuf = Buffer.from(motif.data, "base64");
-    const ext = (motif.mime.split("/")[1] || "png").replace("jpeg", "jpg");
-    files.push(await toFile(motifBuf, `layout-reference.${ext}`, { type: motif.mime }));
+    const blurred = await makeLayoutReferenceBuffer(motifBuf);
+    files.push(await toFile(blurred, "layout-reference-blurred.jpg", { type: "image/jpeg" }));
   }
 
   let result;
