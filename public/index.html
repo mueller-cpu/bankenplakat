@@ -200,8 +200,8 @@
   };
 
   const DEFAULT_MOTIFS = [
-    { src: "/motifs/mann_schafe.png", label: "Mann · Schafe" },
-    { src: "/motifs/frau_schafe.png", label: "Frau · Schafe" }
+    { src: "/motifs/mann_schafe.png", label: "Mann · Schafe", gender: "male" },
+    { src: "/motifs/frau_schafe.png", label: "Frau · Schafe", gender: "female" }
   ];
 
   // ------------------ Utils ------------------
@@ -254,15 +254,15 @@
       const tile = document.createElement("div");
       tile.className = "motif-tile";
       tile.innerHTML = `<img src="${m.src}" alt="${m.label}" /><div class="badge">Ausgewählt</div>`;
-      tile.addEventListener("click", () => selectMotif(m.src, tile));
+      tile.addEventListener("click", () => selectMotif(m, tile));
       grid.appendChild(tile);
     });
   }
 
-  function selectMotif(src, tileEl) {
+  function selectMotif(motif, tileEl) {
     $$(".motif-tile").forEach(t => t.classList.remove("selected"));
     if (tileEl) tileEl.classList.add("selected");
-    state.motif = { src };
+    state.motif = { src: motif.src, gender: motif.gender };
   }
 
   // ------------------ Step 2: Personenfotos ------------------
@@ -360,6 +360,7 @@
         body: JSON.stringify({
           personImages: personsSmall,
           mode: state.mode,
+          subjectGender: state.motif?.gender || null,
           aspectRatio: "3:4",
           imageSize: "4K"
         })

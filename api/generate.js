@@ -141,6 +141,7 @@ export default async function handler(req, res) {
       personImage,
       personImages,
       mode = "face",
+      subjectGender = null,
       aspectRatio = "3:4",
       imageSize = "4K"
     } = req.body || {};
@@ -169,7 +170,13 @@ export default async function handler(req, res) {
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const prompt = mode === "full" ? PROMPTS.full : PROMPTS.face;
+    const basePrompt = mode === "full" ? PROMPTS.full : PROMPTS.face;
+    const genderPrefix = subjectGender === "female"
+      ? `SUBJECT GENDER (highest priority — non-negotiable): The person is a WOMAN. Render as a woman: feminine face, body, hair and clothing. Wardrobe is feminine business attire (e.g. blazer with blouse, business dress, suit appropriate for a woman) — NEVER a men's suit, NEVER male facial features. If the reference photos show a woman, this anchor confirms it; if you are uncertain, default to woman.\n\n`
+      : subjectGender === "male"
+      ? `SUBJECT GENDER (highest priority — non-negotiable): The person is a MAN. Render as a man: masculine face, body, hair and clothing. Wardrobe is men's business attire (suit, blazer, shirt). NEVER feminine features. If the reference photos show a man, this anchor confirms it; if uncertain, default to man.\n\n`
+      : "";
+    const prompt = genderPrefix + basePrompt;
 
     const userParts = [{ text: prompt }];
     persons.forEach((p, i) => {
